@@ -136,7 +136,7 @@ test("chord library: every root × quality has guitar voicings and piano inversi
   assert.equal(pianoInversions("Cmaj7").length, 4);
   assert.deepEqual(pianoInversions("Bmaj7")[0].right, ["B3", "D#4", "F#4", "A#4"]); // sharps, not Eb/Gb/Bb
   assert.deepEqual(pianoInversions("Eb")[0].right, ["Eb4", "G4", "Bb4"]);
-  const missing = CHORD_ROOTS.flatMap((r) => CHORD_QUALITIES.map((q) => r + q.s)).filter((c) => !guitarVoicings(c).length || pianoInversions(c).length < 3);
+  const missing = CHORD_ROOTS.flatMap((r) => CHORD_QUALITIES.map((q) => r + q.s)).filter((c) => !guitarVoicings(c).length || pianoInversions(c).length < (c.endsWith("5") ? 2 : 3)); // power chord: 2 notes
   assert.deepEqual(missing, []);
 });
 
@@ -154,7 +154,7 @@ test("chords-db: computed string notes match the db's own midi for every guitar 
   const { Note } = await import("tonal");
   const { CHORD_ROOTS, DB_SUFFIXES, dbGuitar, voicingNotes, chordName, FRETS_ON_CHORD } = await import("./voicing");
   assert.equal(FRETS_ON_CHORD, 4);
-  assert.equal(DB_SUFFIXES.length, 63);
+  assert.equal(DB_SUFFIXES.length, 64); // 63 from chords-db + "5"
   let checked = 0;
   for (const r of CHORD_ROOTS)
     for (const sfx of DB_SUFFIXES)
@@ -163,7 +163,7 @@ test("chords-db: computed string notes match the db's own midi for every guitar 
         assert.deepEqual(voicingNotes(v).filter(Boolean), fromDb, `${chordName(r, sfx)} ${v.frets}`);
         checked++;
       }
-  assert.equal(checked, 2069);
+  assert.ok(checked > 2069, String(checked)); // db positions + movable/power/built slash shapes
   assert.equal(chordName("C", "major"), "C");
   assert.equal(chordName("A", "m/B"), "Am/B");
 });
@@ -179,4 +179,23 @@ test("enrich: strict iTunes match", async () => {
   assert.ok(pickMatch({ title: "Ada Ampun Bapa Bagimu", artist: "Nikita" }, [r("Anak Bungsu (Ada Ampun Bapa Bagimu)", "Nikita")]));
   assert.equal(pickMatch({ title: "Live", artist: "Nikita" }, [r("Bapa (Live)", "Nikita")]), undefined);
   assert.equal(bigArtwork("https://x/a.jpg/100x100bb.jpg"), "https://x/a.jpg/600x600bb.jpg");
+});
+
+test("slash chords: common open shapes in any key, plus movable & power chords", async () => {
+  const { guitarVoicings: g, dbGuitar } = await import("./voicing");
+  const abs = (v: { frets: number[]; baseFret: number }) => v.frets.map((f) => (f <= 0 ? (f < 0 ? "x" : 0) : f + v.baseFret - 1)).join("");
+  const shapes = (c: string) => g(c).map(abs);
+  for (const [c, want] of [["D/F#", "2x0232"], ["G/B", "x20003"], ["C/G", "332010"], ["C/E", "032010"], ["Am/G", "302210"], ["Bb/D", "xx0331"], ["D7/F#", "2x0212"], ["Am7/G", "302010"]] as const)
+    assert.ok(shapes(c).includes(want), `${c}: ${shapes(c).join(" ")}`);
+  // every built slash voicing really has that bass as its lowest note
+  for (const c of ["E/G#", "A/C#", "F/C", "Gmaj7/B", "Em/D", "Ab/Eb", "F#m/E"]) {
+    const vs = g(c);
+    assert.ok(vs.length, c);
+    const bass = { "G#": 8, "C#": 1, C: 0, B: 11, D: 2, Eb: 3, E: 4 }[c.split("/")[1]]!;
+    for (const v of vs) assert.equal(Math.min(...v.midi!) % 12, bass, `${c} ${abs(v)}`);
+  }
+  assert.ok(shapes("E5").includes("022xxx") && shapes("A5").includes("x022xx"), shapes("E5").join(" "));
+  assert.ok(shapes("G5").includes("355xxx") && shapes("C5").includes("x355xx"), shapes("G5").join(" "));
+  assert.ok(dbGuitar("A", "5").some((v) => v.tag?.includes("geser")));
+  assert.ok(g("F").some((v) => abs(v) === "133211" && v.tag === "Bentuk E · geser"), g("F").map((v) => abs(v) + v.tag).join());
 });

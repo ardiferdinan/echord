@@ -131,7 +131,7 @@ export function ChordLibrary() {
       <section>
         <h2 className="mb-4 font-display text-xl font-black uppercase">
           {instrument === "guitar" ? `Semua posisi ${chord} (${all.length})` : `Inversi ${chord}`}
-          {instrument === "guitar" && <span className="ml-2 align-middle text-xs font-medium normal-case text-muted">sumber: chords-db</span>}
+          {instrument === "guitar" && <span className="ml-2 align-middle text-xs font-medium normal-case text-muted">chords-db + bentuk geser</span>}
         </h2>
         {instrument === "guitar" ? (
           <VoicingGrid voicings={all} />

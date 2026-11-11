@@ -44,18 +44,102 @@ export function chordTones(chord: string) {
   return { notes: c.notes, bass: c.bass || c.tonic || "", chromas: new Set(c.notes.map((n) => Note.chroma(n)!)) };
 }
 
+// ---------- movable ("geser") shapes ----------
+// Barre shapes named after the open chord they come from. Slide the whole shape up or down and the
+// chord changes key with it. shape = fret offsets from the root fret, string 6 -> 1, -1 = muted.
+type Movable = { name: string; root: 0 | 1; shape: number[]; fingers: number[] };
+const E = (shape: number[], fingers: number[]): Movable => ({ name: "E", root: 0, shape, fingers });
+const A = (shape: number[], fingers: number[]): Movable => ({ name: "A", root: 1, shape, fingers });
+const MOVABLE: Record<string, Movable[]> = {
+  "5": [E([0, 2, 2, -1, -1, -1], [1, 3, 4, 0, 0, 0]), A([-1, 0, 2, 2, -1, -1], [0, 1, 3, 4, 0, 0])],
+  major: [E([0, 2, 2, 1, 0, 0], [1, 3, 4, 2, 1, 1]), A([-1, 0, 2, 2, 2, 0], [0, 1, 3, 3, 3, 1])],
+  minor: [E([0, 2, 2, 0, 0, 0], [1, 3, 4, 1, 1, 1]), A([-1, 0, 2, 2, 1, 0], [0, 1, 3, 4, 2, 1])],
+  "7": [E([0, 2, 0, 1, 0, 0], [1, 3, 1, 2, 1, 1]), A([-1, 0, 2, 0, 2, 0], [0, 1, 3, 1, 4, 1])],
+  m7: [E([0, 2, 0, 0, 0, 0], [1, 3, 1, 1, 1, 1]), A([-1, 0, 2, 0, 1, 0], [0, 1, 3, 1, 2, 1])],
+  maj7: [E([0, -1, 1, 1, 0, -1], [1, 0, 3, 4, 2, 0]), A([-1, 0, 2, 1, 2, 0], [0, 1, 3, 2, 4, 1])],
+  sus4: [E([0, 2, 2, 2, 0, 0], [1, 2, 3, 4, 1, 1]), A([-1, 0, 2, 2, 3, 0], [0, 1, 2, 3, 4, 1])],
+  sus2: [A([-1, 0, 2, 2, 0, 0], [0, 1, 3, 4, 1, 1])],
+};
+
+/** Absolute fret per string (-1 muted, 0 open). */
+const absFrets = (v: GuitarVoicing) => v.frets.map((f) => (f <= 0 ? f : f + v.baseFret - 1));
+const key = (v: GuitarVoicing) => absFrets(v).join();
+
+/** Build a chords-db style voicing (frets relative to baseFret) from absolute frets. */
+function fromAbs(abs: number[], fingers: number[], tag?: string): GuitarVoicing {
+  const played = abs.filter((f) => f > 0);
+  const lo = played.length ? Math.min(...played) : 1;
+  const baseFret = Math.max(...abs) <= 4 ? 1 : lo;
+  const frets = abs.map((f) => (f <= 0 ? f : f - baseFret + 1));
+  const barreAt = frets.filter((f, i) => f > 0 && fingers[i] === 1).length > 1 ? frets[fingers.indexOf(1)] : 0;
+  return {
+    frets, fingers, baseFret, barres: barreAt ? [barreAt] : [], tag,
+    midi: abs.flatMap((f, i) => (f < 0 ? [] : [STRING_MIDI[i] + f])),
+  };
+}
+
+function movable(root: string, quality: string): GuitarVoicing[] {
+  const pc = Note.chroma(root);
+  if (pc === undefined) return [];
+  return (MOVABLE[quality] ?? []).flatMap((m) => {
+    const r = (pc - STRING_MIDI[m.root] + 120) % 12;
+    const at = quality === "5" && r === 0 ? [0, 12] : [r || 12]; // open E5 / A5 are worth showing too
+    return at.map((r) => {
+      const open = r === 0;
+      return fromAbs(m.shape.map((o) => (o < 0 ? -1 : o + r)), open ? m.fingers.map((f) => Math.max(0, f - 1)) : m.fingers, open ? "Posisi terbuka" : `Bentuk ${m.name} · geser`);
+    });
+  });
+}
+
+/** chords-db positions plus the movable shapes it lacks; db positions that ARE a movable shape get its label. */
+function baseVoicings(root: string, quality: string): GuitarVoicing[] {
+  const db = DB.chords[DB_KEY[root]]?.find((c) => c.suffix === quality)?.positions ?? [];
+  const mov = movable(root, quality);
+  const byKey = new Map(mov.map((v) => [key(v), v.tag]));
+  const tagged = db.map((v) => (byKey.has(key(v)) ? { ...v, tag: byKey.get(key(v)) } : v));
+  const seen = new Set(tagged.map(key));
+  return [...tagged, ...mov.filter((v) => !seen.has(key(v)))];
+}
+
+/**
+ * Slash chord from a base shape: put the bass note on string 6, 5 or 4 within reach of the shape and
+ * mute everything below it, keeping root + 3rd above. Gives the usual D/F# 2x0232, G/B x20003,
+ * C/G 332010, Bb/D xx0331, and the same idea for D7/F#, Am7/G, in any key.
+ */
+function withBass(v: GuitarVoicing, bass: number, need: number[]): GuitarVoicing | null {
+  const abs = absFrets(v);
+  const played = abs.filter((f) => f > 0);
+  const lo = played.length ? Math.min(...played) : 0, hi = played.length ? Math.max(...played) : 0;
+  for (let s = 0; s < 3; s++) {
+    for (const f of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]) {
+      if ((STRING_MIDI[s] + f) % 12 !== bass) continue;
+      if (f > 0 && (f < hi - 3 || f > lo + 3)) continue; // one hand span (4 frets)
+      const next = abs.map((x, i) => (i < s ? -1 : i === s ? f : x));
+      const above = next.flatMap((x, i) => (i > s && x >= 0 ? [STRING_MIDI[i] + x] : []));
+      if (above.length < 2 || above.some((m) => m <= STRING_MIDI[s] + f)) continue;
+      if (!need.every((pc) => above.some((m) => m % 12 === pc))) continue;
+      const fingers = (v.fingers ?? v.frets.map(() => 0)).map((x, i) => (i <= s ? 0 : x));
+      return fromAbs(next, fingers);
+    }
+  }
+  return null;
+}
+
 export function guitarVoicings(chord: string): GuitarVoicing[] {
   const m = chord.match(CHORD_RE);
-  if (!m) return [];
-  const list = DB.chords[DB_KEY[m[1]]];
-  if (!list) return [];
+  if (!m || !DB_KEY[m[1]]) return [];
   const quality = SUFFIX[m[2]] ?? m[2];
-  if (m[3]) {
-    const slash = (quality === "minor" ? "m/" : "/") + (DB_SLASH[m[3]] ?? m[3]);
-    const hit = list.find((c) => c.suffix === slash);
-    if (hit) return hit.positions;
-  }
-  return list.find((c) => c.suffix === quality)?.positions ?? [];
+  const base = baseVoicings(m[1], quality);
+  if (!m[3]) return base;
+  const bass = Note.chroma(m[3]);
+  if (bass === undefined) return base;
+  // chords-db has a few exact slash chords (major/minor triads only); then build the rest
+  const exact = DB.chords[DB_KEY[m[1]]].find((c) => c.suffix === (quality === "minor" ? "m/" : "/") + (DB_SLASH[m[3]] ?? m[3]))?.positions ?? [];
+  const { notes } = chordTones(m[1] + m[2]);
+  const need = notes.slice(0, quality === "5" ? 1 : 2).map((n) => Note.chroma(n)!);
+  const built = base.map((v) => withBass(v, bass, need)).filter((v): v is GuitarVoicing => !!v);
+  const seen = new Set<string>();
+  return [...exact, ...built].filter((v) => !seen.has(key(v)) && !!seen.add(key(v))).sort((a, b) => a.baseFret - b.baseFret);
 }
 
 const midiOf = (v: GuitarVoicing, s: number) =>
@@ -170,17 +254,17 @@ export function pianoInversions(chord: string) {
 
 // ---------- chord library, straight from chords-db ----------
 export const CHORD_ROOTS = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
-/** Every guitar suffix chords-db has (63), e.g. "major", "m7b5", "/E", "m/B". */
-export const DB_SUFFIXES = DB.suffixes;
-export const COMMON_SUFFIXES = ["major", "minor", "7", "maj7", "m7", "sus2", "sus4", "7sus4", "add9", "6", "m6", "9", "m9", "dim", "dim7", "m7b5", "aug"];
+/** Every guitar suffix chords-db has (63), e.g. "major", "m7b5", "/E", "m/B", plus "5". */
+export const DB_SUFFIXES = [...DB.suffixes, "5"]; // + power chords (not in chords-db, built from movable shapes)
+export const COMMON_SUFFIXES = ["major", "minor", "5", "7", "maj7", "m7", "sus2", "sus4", "7sus4", "add9", "6", "m6", "9", "m9", "dim", "dim7", "m7b5", "aug"];
 export const isSlashSuffix = (s: string) => s.includes("/");
 
 /** Display name: C + "major" -> "C", "minor" -> "Cm", "m/B" -> "Cm/B". */
 export const chordName = (root: string, suffix: string) => root + (suffix === "major" ? "" : suffix === "minor" ? "m" : suffix);
 
-/** All positions chords-db has for exactly this root + suffix (no regex parsing, so "alt", "7sg"… work too). */
+/** Library lookup by chords-db suffix name ("alt", "7sg", "m/B"…): db positions + movable shapes, slash chords built. */
 export const dbGuitar = (root: string, suffix: string): GuitarVoicing[] =>
-  DB.chords[DB_KEY[root]]?.find((c) => c.suffix === suffix)?.positions ?? [];
+  isSlashSuffix(suffix) ? guitarVoicings(chordName(root, suffix)) : baseVoicings(root, suffix);
 
 // kept for callers that pick from the common list
 export const CHORD_QUALITIES = COMMON_SUFFIXES.map((s) => ({ s: s === "major" ? "" : s === "minor" ? "m" : s, label: s === "major" ? "Mayor" : s === "minor" ? "Minor" : s.replace("b5", "♭5") }));

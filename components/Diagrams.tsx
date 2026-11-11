@@ -10,7 +10,7 @@ export function GuitarDiagram({ v, size = 1, notes = false }: { v: GuitarVoicing
   const x = (s: number) => x0 + s * sx;
   const yMid = (f: number) => y0 + (f - 0.5) * sy;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width={W * size} height={H * size} role="img" aria-label="Diagram chord gitar" className="text-ink">
+    <svg viewBox={`-6 0 ${W + 6} ${H}`} width={(W + 6) * size} height={H * size} role="img" aria-label="Diagram chord gitar" className="text-ink">
       {v.baseFret > 1 ? (
         <text x={x0 - 7} y={yMid(1) + 4} fontSize="10" textAnchor="end" fill="currentColor" fontWeight="600">{v.baseFret}fr</text>
       ) : (
