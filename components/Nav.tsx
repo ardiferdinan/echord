@@ -32,19 +32,18 @@ export function NavLinks({ onBrand = false }: { onBrand?: boolean }) {
   }`;
   return (
     <div className="flex items-center gap-1">
-      <Link href="/" className={`${link} hidden sm:grid`}>Lagu</Link>
+      <Link href="/songs" className={`${link} hidden sm:grid`}>Lagu</Link>
       <Link href="/chords" className={link}>Chord</Link>
       <Link href="/setlists" className={link}>Setlist</Link>
       <ThemeToggle className={onBrand ? "text-on-brand/85 hover:bg-on-brand/15 hover:text-on-brand" : undefined} />
       <form action={logout}>
         <button className={link} title="Keluar" aria-label="Keluar">
-          <svg viewBox="0 0 24 24" className="size-5 sm:hidden" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4" />
           </svg>
-          <span className="hidden sm:inline">Keluar</span>
         </button>
       </form>
-      <Link href="/admin/new" className={`btn btn-dark ml-1 hidden ${onBrand ? "lg:inline-flex" : "sm:inline-flex"}`}>+ Tambah lagu</Link>
+      <Link href="/admin/new" className={`btn btn-dark ml-1 hidden ${onBrand ? "xl:inline-flex" : "sm:inline-flex"}`}>+ Tambah lagu</Link>
     </div>
   );
 }

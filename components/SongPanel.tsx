@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Song } from "@/lib/db";
 
@@ -13,21 +14,17 @@ export function SongPanelSkeleton() {
   );
 }
 
-type Row = Pick<Song, "id" | "slug" | "title" | "artist" | "original_key">;
+type Row = Pick<Song, "id" | "slug" | "title" | "artist" | "original_key" | "artwork_url">;
 
-export function SongPanelView({ songs, q, error }: { songs: Row[]; q: string; error?: string }) {
+export function SongPanelView({ songs, error }: { songs: Row[]; error?: string }) {
   return (
-    <section id="lagu" className={PANEL} aria-label={q ? `Hasil pencarian ${q}` : "Lagu terbaru"}>
+    <section id="lagu" className={PANEL} aria-label="Baru ditambahkan">
       <header className="flex items-center gap-3 px-3 pb-2 pt-2">
-        <span className="display text-2xl italic tabular-nums">♪ {String(songs.length).padStart(2, "0")}</span>
-        <h2 className="min-w-0 flex-1 truncate font-display text-sm font-bold uppercase tracking-widest opacity-90">
-          {q ? `Hasil “${q}”` : "Lagu terbaru"}
-        </h2>
-        {q && (
-          <Link href="/" className="grid h-9 place-items-center rounded-full px-3 text-sm font-medium hover:bg-on-brand/15">
-            Reset
-          </Link>
-        )}
+        <span className="display text-2xl italic" aria-hidden>♪</span>
+        <h2 className="min-w-0 flex-1 truncate font-display text-sm font-bold uppercase tracking-widest opacity-90">Baru ditambahkan</h2>
+        <Link href="/songs" className="grid h-9 place-items-center rounded-full px-3 text-sm font-bold hover:bg-on-brand/15">
+          Semua lagu →
+        </Link>
       </header>
 
       {error ? (
@@ -38,9 +35,13 @@ export function SongPanelView({ songs, q, error }: { songs: Row[]; q: string; er
           {songs.map((s, i) => (
             <li key={s.id}>
               <Link href={`/songs/${s.slug}`} className="group flex items-center gap-3 rounded-2xl p-2 transition hover:bg-on-brand/12">
-                <span className={`grid size-12 shrink-0 place-items-center rounded-2xl ${i % 3 === 1 ? "bg-hot text-on-hot" : "bg-bg text-accent"}`}>
-                  <span className="display text-xl italic">{s.original_key || "♪"}</span>
-                </span>
+                {s.artwork_url ? (
+                  <Image src={s.artwork_url} alt="" width={48} height={48} className="size-12 shrink-0 rounded-2xl" />
+                ) : (
+                  <span className={`grid size-12 shrink-0 place-items-center rounded-2xl ${i % 3 === 1 ? "bg-hot text-on-hot" : "bg-bg text-accent"}`}>
+                    <span className="display text-xl italic">{s.original_key || "♪"}</span>
+                  </span>
+                )}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-display text-[17px] font-extrabold">{s.title}</span>
                   <span className="block truncate text-sm opacity-75">{s.artist || "—"}</span>
@@ -52,7 +53,7 @@ export function SongPanelView({ songs, q, error }: { songs: Row[]; q: string; er
         </ul>
       ) : (
         <p className="m-1 rounded-2xl bg-on-brand/10 p-4 text-sm">
-          Belum ada lagu{q && " yang cocok"}.{" "}
+          Belum ada lagu.{" "}
           <Link href="/admin/new" className="font-bold underline">Tambah lagu</Link>
         </p>
       )}

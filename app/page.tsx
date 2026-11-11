@@ -5,18 +5,14 @@ import { Hero } from "@/components/Hero";
 import { SearchPill } from "@/components/Frame";
 import { SongPanelSkeleton, SongPanelView } from "@/components/SongPanel";
 
-export default function Home({ searchParams }: PageProps<"/">) {
+export default function Home() {
   return (
     <div className="p-3 sm:p-4">
       <Hero
-        search={
-          <Suspense fallback={<SearchPill q="" />}>
-            {searchParams.then((p) => <SearchPill q={String(p.q ?? "")} />)}
-          </Suspense>
-        }
+        search={<SearchPill />}
         songs={
           <Suspense fallback={<SongPanelSkeleton />}>
-            <SongPanel searchParams={searchParams} />
+            <SongPanel />
           </Suspense>
         }
       />
@@ -24,13 +20,11 @@ export default function Home({ searchParams }: PageProps<"/">) {
   );
 }
 
-
-async function SongPanel({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
+async function SongPanel() {
   await connection();
-  const q = String((await searchParams).q ?? "");
-  const res = await searchSongs(q).then(
+  const res = await searchSongs("", 12).then(
     (songs) => ({ songs, error: undefined }),
     (e: Error) => ({ songs: [], error: e.message }),
   );
-  return <SongPanelView songs={res.songs} q={q} error={res.error} />;
+  return <SongPanelView songs={res.songs} error={res.error} />;
 }

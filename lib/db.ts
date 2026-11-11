@@ -34,6 +34,22 @@ export async function searchSongs(q: string, limit = 30): Promise<Song[]> {
     order by title limit ${limit}`) as Song[];
 }
 
+export type SongCard = Pick<Song, "id" | "slug" | "title" | "artist" | "original_key" | "artwork_url" | "album">;
+
+/** Browse page: optional search or first letter, alphabetical, paginated. */
+export async function listSongs({ q = "", letter = "", page = 1, per = 48 }): Promise<{ songs: SongCard[]; total: number }> {
+  const t = q.trim(), like = `%${t}%`;
+  const rows = (await db()`
+    select id, slug, title, artist, original_key, artwork_url, album, count(*) over()::int as total
+    from songs
+    where status = 'published'
+      and (${!t} or title ilike ${like} or artist ilike ${like})
+      and (${!letter} or title ilike ${letter + "%"})
+    order by lower(title)
+    limit ${per} offset ${(Math.max(1, page) - 1) * per}`) as (SongCard & { total: number })[];
+  return { songs: rows, total: rows[0]?.total ?? 0 };
+}
+
 export async function importedUrls(): Promise<Set<string>> {
   return new Set(((await db()`select source_url from songs where source_url is not null`) as { source_url: string }[]).map((r) => r.source_url));
 }
