@@ -1,0 +1,65 @@
+import { neon } from "@neondatabase/serverless";
+
+export type Song = {
+  id: number;
+  slug: string;
+  title: string;
+  artist: string | null;
+  category: string;
+  original_key: string | null;
+  bpm: number | null;
+  content: string;
+  status?: string;
+  submitted_by?: string | null;
+};
+
+const db = () => {
+  if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL belum di-set (lihat .env.example)");
+  return neon(process.env.DATABASE_URL);
+};
+
+// ponytail: ILIKE scan, switch to pg_trgm index when the catalog reaches thousands of songs
+export async function searchSongs(q: string, limit = 30): Promise<Song[]> {
+  const t = q.trim();
+  if (!t) return (await db()`select * from songs where status = 'published' order by created_at desc limit ${limit}`) as Song[];
+  const like = `%${t}%`;
+  return (await db()`
+    select * from songs where status = 'published' and (title ilike ${like} or artist ilike ${like})
+    order by title limit ${limit}`) as Song[];
+}
+
+export async function getSong(slug: string): Promise<Song | undefined> {
+  return ((await db()`select * from songs where slug = ${slug} and status = 'published'`) as Song[])[0];
+}
+
+export const slugify = (s: string) =>
+  s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+type NewSong = Omit<Song, "id" | "slug" | "category"> & { category?: string };
+
+export async function insertSong(s: NewSong) {
+  const base = slugify(`${s.title} ${s.artist ?? ""}`) || "lagu";
+  const rows = (await db()`
+    insert into songs (slug, title, artist, category, original_key, bpm, content, status, submitted_by)
+    values (
+      ${base} || coalesce((select '-' || (count(*) + 1) from songs where slug = ${base} or slug like ${base + "-%"} having count(*) > 0), ''),
+      ${s.title}, ${s.artist}, ${s.category ?? "rohani"}, ${s.original_key}, ${s.bpm}, ${s.content},
+      ${s.status ?? "published"}, ${s.submitted_by ?? null})
+    returning slug`) as { slug: string }[];
+  return rows[0].slug;
+}
+
+// ---------- shared setlists ----------
+export async function getShared(id: string): Promise<unknown | undefined> {
+  return ((await db()`select data from shared_setlists where id = ${id}`) as { data: unknown }[])[0]?.data;
+}
+
+/** Insert, or update when id + token match. Returns false on token mismatch. */
+export async function saveShared(id: string, token: string, data: unknown) {
+  const rows = await db()`
+    insert into shared_setlists (id, token, data) values (${id}, ${token}, ${JSON.stringify(data)}::jsonb)
+    on conflict (id) do update set data = excluded.data, updated_at = now()
+      where shared_setlists.token = excluded.token
+    returning id`;
+  return rows.length > 0;
+}

@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Echord
 
-## Getting Started
+Chord lagu rohani berbasis teks: transpose, diagram gitar/piano + saran voicing sesuai band, setlist drag & drop per section, stage mode.
 
-First, run the development server:
+## Setup
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. Buat database di [Neon](https://neon.tech) (atau Vercel → Storage → Neon, `DATABASE_URL` terisi otomatis).
+2. `cp .env.example .env.local`, isi `DATABASE_URL` dan `ADMIN_PASSWORD`.
+3. `npm install`
+4. `npx tsx --env-file=.env.local scripts/seed.ts` membuat tabel + 5 hymne public domain.
+5. `npm run dev` lalu buka http://localhost:3000
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Sudah pernah seed sebelumnya? Jalankan seed sekali lagi untuk migrasi (kolom `status`, tabel `shared_setlists`), aman diulang.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Tambah lagu di `/admin/new` (password = `ADMIN_PASSWORD`). Publik mengirim lewat `/submit`, lalu di-approve di `/admin/review`:
+- Paste teks "chord di atas lirik" dari mana saja, dikonversi otomatis (judul `Judul - Penyanyi`, header Intro/Verse/Reff/Bridge/Int.).
+- Atau cari lirik (LRCLIB), lalu tab **Klik chord**: klik suku kata untuk menaruh chord, ¶ untuk memecah section.
+- Banyak lagu sekaligus: pisahkan dengan baris `---` atau drop beberapa file `.txt`.
+- `⌘/Ctrl + Enter` untuk simpan dan lanjut ke lagu berikutnya.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Share setlist
 
-## Learn More
+Di editor setlist klik **Bagikan** untuk mendapat link `/s/<id>`. Anggota band bisa langsung pakai stage mode, atau simpan salinan. Setelah setlist diubah, klik **Update link band**: link tetap sama, anggota tinggal refresh. Hak update hanya ada di browser pembuatnya (token).
 
-To learn more about Next.js, take a look at the following resources:
+## Struktur
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `lib/chordpro.ts`: parser/serializer ChordPro, transpose, import chords-over-words
+- `lib/voicing.ts`: voicing gitar (chords-db), piano (tonal), saran sesuai konteks band
+- `lib/storage.ts`: setlist & preferensi di localStorage
+- `components/SetlistEditor.tsx`: drag & drop lagu dan section
+- `app/(main)/setlists/[id]/play/Stage.tsx`: stage mode (auto-scroll, pedal PageDown, swipe)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`npm test` menjalankan tes lib.

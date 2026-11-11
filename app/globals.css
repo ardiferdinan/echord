@@ -1,26 +1,145 @@
 @import "tailwindcss";
 
+/*
+ * Palette (only these, everything else is a transparent mix of them):
+ *   light: main #2C99D6 · secondary #F8FAFC · filler #EB2F33
+ *   dark:  main #080F1B · secondary #329DD2 · filler #FF4C2B
+ * Text "ink" reuses the other mode's anchor (#080F1B on light, #F8FAFC on dark).
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --main: #2c99d6;
+  --secondary: #f8fafc;
+  --filler: #eb2f33;
+  --ink: #080f1b;
+
+  --bg: var(--secondary);
+  --brand: var(--main); /* slabs, primary buttons, tiles */
+  --on-brand: #f8fafc;
+  --hot: var(--filler);
+  --on-hot: #f8fafc;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --main: #080f1b;
+    --secondary: #329dd2;
+    --filler: #ff4c2b;
+    --ink: #f8fafc;
+    --bg: var(--main);
+    --brand: var(--secondary);
+  }
+}
+:root[data-theme="dark"] {
+  --main: #080f1b;
+  --secondary: #329dd2;
+  --filler: #ff4c2b;
+  --ink: #f8fafc;
+  --bg: var(--main);
+  --brand: var(--secondary);
+}
+/* derived, via transparency */
+:root {
+  --surface: color-mix(in srgb, var(--brand) 7%, var(--bg));
+  --surface-2: color-mix(in srgb, var(--brand) 13%, var(--bg));
+  --line: color-mix(in srgb, var(--ink) 12%, transparent);
+  --muted: color-mix(in srgb, var(--ink) 62%, transparent);
+  --accent: color-mix(in srgb, var(--brand) 78%, var(--ink)); /* chord text: brand, deepened for legibility */
+  --accent-soft: color-mix(in srgb, var(--brand) 15%, transparent);
+  --hot-soft: color-mix(in srgb, var(--hot) 14%, transparent);
+  --glass: color-mix(in srgb, var(--bg) 86%, transparent);
+  --dark: var(--hot); /* call-to-action tiles use the filler color */
+  --on-dark: var(--on-hot);
+  --verse: var(--muted);
+  --chorus: var(--hot);
+  --bridge: color-mix(in srgb, var(--brand) 55%, var(--hot));
+  --prechorus: var(--brand);
+  --part: color-mix(in srgb, var(--hot) 60%, var(--ink));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --accent: color-mix(in srgb, var(--brand) 82%, var(--ink));
+  }
+}
+:root[data-theme="dark"] {
+  --accent: color-mix(in srgb, var(--brand) 82%, var(--ink));
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-on-brand: var(--on-brand);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-hot: var(--hot);
+  --color-hot-soft: var(--hot-soft);
+  --color-dark: var(--dark);
+  --color-on-dark: var(--on-dark);
+  --color-on-hot: var(--on-hot);
+  --color-glass: var(--glass);
+  --font-sans: var(--font-satoshi), system-ui, sans-serif;
+  --font-display: var(--font-creato), var(--font-satoshi), system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Sizing: 44px touch targets on mobile, 40px on desktop; 16px input text (no iOS zoom) */
+@utility btn {
+  @apply inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-line bg-surface px-5 text-[15px] font-medium transition hover:bg-surface-2 active:scale-[.97] disabled:opacity-40 sm:h-10 sm:px-4 sm:text-sm;
+}
+@utility btn-primary {
+  @apply border-transparent bg-brand font-bold text-on-brand hover:bg-brand hover:brightness-110;
+}
+@utility btn-dark {
+  @apply border-transparent bg-hot font-bold text-on-hot hover:bg-hot hover:brightness-110;
+}
+@utility btn-icon {
+  @apply grid size-11 shrink-0 place-items-center rounded-full transition hover:bg-surface-2 disabled:opacity-30 sm:size-10;
+}
+@utility input {
+  @apply h-12 w-full rounded-2xl border border-line bg-surface px-4 text-base outline-none placeholder:text-muted focus:border-brand sm:h-11 sm:text-[15px];
+}
+@utility card {
+  @apply rounded-3xl border border-line bg-surface;
+}
+@utility glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.4);
+}
+@utility display {
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  line-height: 0.92;
+}
+
+/* Dotted texture from the reference; color via currentColor */
+@utility dots {
+  background-image: radial-gradient(currentColor 2.5px, transparent 3px);
+  background-size: 22px 22px;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.float { animation: float 7s ease-in-out infinite; }
+.float-slow { animation: float 9s ease-in-out -3s infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .float, .float-slow { animation: none; }
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
