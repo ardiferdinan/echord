@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { parseSections, transposeKey, transposeSections } from "@/lib/chordpro";
@@ -35,11 +36,34 @@ export function SongView({ song }: { song: Song }) {
         }}
       >
         <span className="dots pointer-events-none absolute right-40 top-6 hidden h-20 w-32 opacity-50 sm:block" aria-hidden />
-        <h1 className="display relative text-[clamp(32px,6vw,56px)] uppercase">{song.title}</h1>
-        <p className="relative mt-3 font-medium">
-          {song.artist}
-          {song.bpm ? ` · ${song.bpm} BPM` : ""}
-        </p>
+        <div className="relative flex flex-col items-start gap-4 sm:flex-row sm:gap-6">
+          {song.artwork_url && (
+            <Image src={song.artwork_url} alt={`Cover ${song.album ?? song.title}`} width={112} height={112} className="size-16 shrink-0 rounded-2xl shadow-lg shadow-black/20 sm:size-28" />
+          )}
+          <div className="min-w-0">
+            <h1 className="display text-[clamp(32px,6vw,56px)] uppercase">{song.title}</h1>
+            <p className="mt-3 font-medium">
+              {song.artist}
+              {song.bpm ? ` · ${song.bpm} BPM` : ""}
+            </p>
+            {song.album && (
+              <p className="mt-0.5 text-sm opacity-80">
+                {song.album}
+                {song.release_year ? ` · ${song.release_year}` : ""}
+              </p>
+            )}
+          </div>
+        </div>
+        {song.preview_url && (
+          <div className="relative mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <audio controls preload="none" src={song.preview_url} className="h-10 w-full max-w-xs" aria-label={`Preview 30 detik ${song.title}`} />
+            {song.apple_url && (
+              <a href={song.apple_url} target="_blank" rel="noopener noreferrer" className="text-sm font-bold underline-offset-4 hover:underline">
+                Dengarkan di Apple Music ↗
+              </a>
+            )}
+          </div>
+        )}
       </Blob>
 
       <div className="glass z-20 -mx-4 mb-6 flex flex-wrap items-center gap-2 border-b border-line px-4 py-3 sm:sticky sm:top-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">

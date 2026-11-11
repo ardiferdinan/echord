@@ -167,3 +167,16 @@ test("chords-db: computed string notes match the db's own midi for every guitar 
   assert.equal(chordName("C", "major"), "C");
   assert.equal(chordName("A", "m/B"), "Am/B");
 });
+
+test("enrich: strict iTunes match", async () => {
+  const { pickMatch, bigArtwork } = await import("./enrich");
+  const r = (trackName: string, artistName: string, releaseDate = "2020", primaryGenreName = "Christian") => ({ trackName, artistName, releaseDate, primaryGenreName });
+  const res = [r("Yesusku Kau Terindah (Live in Concert)", "Symphony Worship", "2024"), r("Yesusku Kau Terindah", "Symphony Worship", "2023"), r("Terindah", "True Worshippers")];
+  assert.equal(pickMatch({ title: "Yesusku Kau Terindah", artist: "Symphony Worship" }, res)?.releaseDate, "2023");
+  assert.equal(pickMatch({ title: "Yesusku Kau Terindah", artist: "NDC Worship" }, res), undefined);
+  assert.equal(pickMatch({ title: "Above All", artist: "Michael W. Smith" }, [r("Above All", "Michael W Smith")])?.trackName, "Above All");
+  assert.equal(pickMatch({ title: "Bapa Abraham", artist: null }, [r("Bapa Abraham", "Kids", "2010", "Children's Music")]), undefined);
+  assert.ok(pickMatch({ title: "Ada Ampun Bapa Bagimu", artist: "Nikita" }, [r("Anak Bungsu (Ada Ampun Bapa Bagimu)", "Nikita")]));
+  assert.equal(pickMatch({ title: "Live", artist: "Nikita" }, [r("Bapa (Live)", "Nikita")]), undefined);
+  assert.equal(bigArtwork("https://x/a.jpg/100x100bb.jpg"), "https://x/a.jpg/600x600bb.jpg");
+});

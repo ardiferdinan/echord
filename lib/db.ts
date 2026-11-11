@@ -12,6 +12,11 @@ export type Song = {
   status?: string;
   submitted_by?: string | null;
   source_url?: string | null;
+  album?: string | null;
+  release_year?: number | null;
+  artwork_url?: string | null;
+  preview_url?: string | null;
+  apple_url?: string | null;
 };
 
 const db = () => {

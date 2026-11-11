@@ -15,6 +15,13 @@ alter table songs add column if not exists status text not null default 'publish
 alter table songs add column if not exists submitted_by text;
 -- page a song was imported from (scripts/import.mts); unique so re-runs skip it
 alter table songs add column if not exists source_url text unique;
+-- metadata from iTunes Search / Deezer (scripts/enrich.mts); enriched_at set even when nothing matched
+alter table songs add column if not exists album text;
+alter table songs add column if not exists release_year int;
+alter table songs add column if not exists artwork_url text;
+alter table songs add column if not exists preview_url text;
+alter table songs add column if not exists apple_url text;
+alter table songs add column if not exists enriched_at timestamptz;
 
 -- shared setlist snapshots; token lets the creator update the same link
 create table if not exists shared_setlists (
