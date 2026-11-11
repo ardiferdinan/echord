@@ -1,7 +1,7 @@
 // Creates the songs table and inserts public-domain hymns.
 // Texts: authors died before 1955 (public domain in Indonesia, life + 70) and marked
 // "Text Is Public Domain" on hymnary.org. Chords are simple traditional harmonizations.
-// Run: npx tsx --env-file=.env.local scripts/seed.ts
+// Run: npx tsx --env-file=.env.local scripts/seed.mts
 import { readFileSync } from "node:fs";
 import { neon } from "@neondatabase/serverless";
 import { slugify } from "../lib/db";

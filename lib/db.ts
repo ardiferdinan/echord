@@ -11,6 +11,7 @@ export type Song = {
   content: string;
   status?: string;
   submitted_by?: string | null;
+  source_url?: string | null;
 };
 
 const db = () => {
@@ -28,6 +29,10 @@ export async function searchSongs(q: string, limit = 30): Promise<Song[]> {
     order by title limit ${limit}`) as Song[];
 }
 
+export async function importedUrls(): Promise<Set<string>> {
+  return new Set(((await db()`select source_url from songs where source_url is not null`) as { source_url: string }[]).map((r) => r.source_url));
+}
+
 export async function getSong(slug: string): Promise<Song | undefined> {
   return ((await db()`select * from songs where slug = ${slug} and status = 'published'`) as Song[])[0];
 }
@@ -40,11 +45,11 @@ type NewSong = Omit<Song, "id" | "slug" | "category"> & { category?: string };
 export async function insertSong(s: NewSong) {
   const base = slugify(`${s.title} ${s.artist ?? ""}`) || "lagu";
   const rows = (await db()`
-    insert into songs (slug, title, artist, category, original_key, bpm, content, status, submitted_by)
+    insert into songs (slug, title, artist, category, original_key, bpm, content, status, submitted_by, source_url)
     values (
       ${base} || coalesce((select '-' || (count(*) + 1) from songs where slug = ${base} or slug like ${base + "-%"} having count(*) > 0), ''),
       ${s.title}, ${s.artist}, ${s.category ?? "rohani"}, ${s.original_key}, ${s.bpm}, ${s.content},
-      ${s.status ?? "published"}, ${s.submitted_by ?? null})
+      ${s.status ?? "published"}, ${s.submitted_by ?? null}, ${s.source_url ?? null})
     returning slug`) as { slug: string }[];
   return rows[0].slug;
 }

@@ -13,6 +13,8 @@ create table if not exists songs (
 -- public submissions wait for review, only 'published' songs are listed
 alter table songs add column if not exists status text not null default 'published';
 alter table songs add column if not exists submitted_by text;
+-- page a song was imported from (scripts/import.mts); unique so re-runs skip it
+alter table songs add column if not exists source_url text unique;
 
 -- shared setlist snapshots; token lets the creator update the same link
 create table if not exists shared_setlists (

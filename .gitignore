@@ -48,3 +48,4 @@ next-env.d.ts
 /.impeccable/
 /.playwright-mcp/
 skills-lock.json
+/scripts/jrchord-urls.txt

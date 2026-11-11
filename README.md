@@ -7,7 +7,7 @@ Chord lagu rohani berbasis teks: transpose, diagram gitar/piano + saran voicing 
 1. Buat database di [Neon](https://neon.tech) (atau Vercel → Storage → Neon, `DATABASE_URL` terisi otomatis).
 2. `cp .env.example .env.local`, isi `DATABASE_URL` dan `ADMIN_PASSWORD`.
 3. `npm install`
-4. `npx tsx --env-file=.env.local scripts/seed.ts` membuat tabel + 5 hymne public domain.
+4. `npx tsx --env-file=.env.local scripts/seed.mts` membuat tabel + 5 hymne public domain.
 5. `npm run dev` lalu buka http://localhost:3000
 
 Sudah pernah seed sebelumnya? Jalankan seed sekali lagi untuk migrasi (kolom `status`, tabel `shared_setlists`), aman diulang.
