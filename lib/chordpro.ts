@@ -48,6 +48,9 @@ export function transposeChord(chord: string, semis: number, targetKey?: string)
 const HEADER_RE =
   /^\s*[\[(]?\s*(intro|verse|bait|ayat|stanza|reff?|refrain|chorus|pre[- ]?chorus|pre[- ]?reff?|bridge|jembatan|int\.?|interlude|instrumental|musik|coda|outro|ending|tag)\s*(\d*)\s*[\])]?\s*(?:[:.\-]\s*|\s+|$)(.*)$/i;
 
+// a whole line in square brackets is a section name, whatever it says
+const BRACKET_TAG = /^\s*\[\s*([^\][]{1,40}?)\s*\]\s*$/;
+
 export function typeOfLabel(label: string): SectionType {
   const l = label.toLowerCase();
   if (/pre[- ]?(chorus|reff?)/.test(l)) return "prechorus";
@@ -166,7 +169,7 @@ export function uniqueChords(sections: Section[]) {
 }
 
 // ---------- import: "chords over words" plain text -> ChordPro ----------
-const CHORD_LINE_NOISE = /^(\||\/|-+|x\d+|\d+x|\(|\)|\.+|%|:)$/i;
+const CHORD_LINE_NOISE = /^(\||\/|-+|x\d+|\d+x|\(|\)|\.+|•|%|:)$/i;
 
 function chordTokens(line: string) {
   const out: ChordAt[] = [];
@@ -206,7 +209,7 @@ export function importText(raw: string): Imported {
     }
   }
 
-  const hasHeaders = lines.some((l) => HEADER_RE.test(l) && !chordTokens(l));
+  const hasHeaders = lines.some((l) => (HEADER_RE.test(l) || BRACKET_TAG.test(l)) && !chordTokens(l));
   const sections: Section[] = [];
   let cur: Section | null = null;
   let verseN = 0;
@@ -221,6 +224,11 @@ export function importText(raw: string): Imported {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    const tag = !chordTokens(line) && line.match(BRACKET_TAG);
+    if (tag) {
+      open(tag[1].replace(/\s+/g, " ")); // "[ Chorus (Overtone) ]", "[ Turnaround ]": label as written
+      continue;
+    }
     const header = !chordTokens(line) && line.match(HEADER_RE);
     if (header) {
       open(prettyLabel(header[1], header[2]));

@@ -17,7 +17,7 @@ const words = (s: string) => new Set(s.toLowerCase().normalize("NFKD").split(/[^
  * vs "Jason Irwan (feat. Nikita)"). Needs two shared words, or most of them: one shared surname is
  * not enough (Agnes Santoso is not Dwiki Santoso).
  */
-function artistMatches(ours: string, theirs: string) {
+export function artistMatches(ours: string, theirs: string) {
   const a = norm(ours), b = norm(theirs);
   if (a && b && (a.includes(b) || b.includes(a))) return true;
   const wa = [...words(ours)], wb = [...words(theirs)];

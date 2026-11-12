@@ -49,3 +49,5 @@ next-env.d.ts
 /.playwright-mcp/
 skills-lock.json
 /scripts/jrchord-urls.txt
+/scripts/psalmnote-state.json
+/scripts/psalmnote.jsonl

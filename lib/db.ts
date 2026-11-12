@@ -52,6 +52,10 @@ export async function listSongs({ q = "", letter = "", page = 1, per = 48 }): Pr
   return { songs: rows, total: rows[0]?.total ?? 0 };
 }
 
+export async function songKeys(): Promise<{ title: string; artist: string | null }[]> {
+  return (await db()`select title, artist from songs`) as { title: string; artist: string | null }[];
+}
+
 export async function importedUrls(): Promise<Set<string>> {
   return new Set(((await db()`select source_url from songs where source_url is not null`) as { source_url: string }[]).map((r) => r.source_url));
 }

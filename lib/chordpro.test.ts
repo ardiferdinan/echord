@@ -222,3 +222,11 @@ test("slash chords: common open shapes in any key, plus movable & power chords",
   assert.ok(dbGuitar("A", "5").some((v) => v.tag?.includes("geser")));
   assert.ok(g("F").some((v) => abs(v) === "133211" && v.tag === "Bentuk E · geser"), g("F").map((v) => abs(v) + v.tag).join());
 });
+
+test("import: [ bracketed ] section names and • beat marks (PsalmNote)", () => {
+  const { content } = importText("[ Intro ]\n| C  •  G/B  • |\n\n[ Chorus (Overtone) ]\nC        G\nHaleluya Tuhan\n\n[ Turnaround ]\n| F  •  G  • |");
+  const s = parseSections(content);
+  assert.deepEqual(s.map((x) => [x.label, x.type]), [["Intro", "part"], ["Chorus (Overtone)", "chorus"], ["Turnaround", "part"]]);
+  assert.deepEqual(s[0].lines[0].chords.map((c) => c.name), ["C", "G/B"]);
+  assert.equal(s[1].lines[0].text.trim(), "Haleluya Tuhan");
+});
