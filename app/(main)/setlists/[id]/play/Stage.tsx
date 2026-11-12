@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { transposeKey } from "@/lib/chordpro";
+import { detectKey, transposeKey } from "@/lib/chordpro";
 import { useLocal, useSetlists, type Setlist } from "@/lib/storage";
 import { ChordSheet } from "@/components/ChordSheet";
 import { arranged } from "@/components/SetlistEditor";
@@ -17,6 +17,7 @@ export function LocalStage({ id }: { id: string }) {
 export function Stage({ setlist, backHref }: { setlist: Setlist; backHref: string }) {
   const [i, setI] = useState(0);
   const [font, setFont] = useLocal("echord:stage-font", 24);
+  const [numbers, setNumbers] = useLocal("echord:numbers", false); // same choice as the song page
   const [theme, setTheme] = useLocal<"dark" | "light">("echord:stage-theme", "dark");
   const [speed, setSpeed] = useLocal("echord:scroll-speed", 20); // px per second
   const [scrolling, setScrolling] = useState(false);
@@ -110,6 +111,9 @@ export function Stage({ setlist, backHref }: { setlist: Setlist; backHref: strin
         <span className="flex-1 sm:hidden" />
         <button className="btn-icon" onClick={() => setFont(Math.max(14, font - 2))} aria-label="Perkecil teks">A−</button>
         <button className="btn-icon" onClick={() => setFont(Math.min(48, font + 2))} aria-label="Perbesar teks">A+</button>
+        <button className="grid h-11 shrink-0 place-items-center rounded-full px-3 font-display font-bold italic transition hover:bg-surface-2 sm:h-10" onClick={() => setNumbers(!numbers)} aria-pressed={numbers} title="Nama chord / chord angka">
+          {numbers ? "123" : "Abc"}
+        </button>
         <button className="btn-icon hidden sm:grid" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Ganti tema">{theme === "dark" ? "☀" : "☾"}</button>
         <button className="btn-icon hidden sm:grid" onClick={() => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen())} aria-label="Layar penuh">⛶</button>
       </div>
@@ -147,7 +151,7 @@ export function Stage({ setlist, backHref }: { setlist: Setlist; backHref: strin
               {item.notes && <p className="relative mt-4 inline-block rounded-2xl bg-white/15 px-3 py-2 text-base font-medium">📝 {item.notes}</p>}
             </Blob>
             <div className="px-2 sm:px-4">
-              <ChordSheet sections={arranged(item)} fontSize={font} interactive={false} />
+              <ChordSheet sections={arranged(item)} fontSize={font} interactive={false} numberKey={numbers ? key || detectKey(arranged(item)) : undefined} />
             </div>
             {next && (
               <Blob

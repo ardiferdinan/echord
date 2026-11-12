@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import type { Line, Section, SectionType } from "@/lib/chordpro";
+import { toNumber, type Line, type Section, type SectionType } from "@/lib/chordpro";
 import { suggest, type BandContext } from "@/lib/voicing";
 import { useBandContext } from "@/lib/storage";
 import { GuitarDiagram, PianoDiagram } from "./Diagrams";
@@ -23,7 +23,7 @@ function units(line: Line) {
 
 type ChordHandlers = { onEnter: (c: string, el: HTMLElement) => void; onLeave: () => void; onTap: (c: string, el: HTMLElement) => void };
 
-function SheetLine({ line, h }: { line: Line; h?: ChordHandlers }) {
+function SheetLine({ line, h, label }: { line: Line; h?: ChordHandlers; label: (c: string) => string }) {
   if (!line.chords.length) return <div className="min-h-[1.5em] whitespace-pre-wrap">{line.text}</div>;
   return (
     <div className="flex flex-wrap items-end">
@@ -38,8 +38,9 @@ function SheetLine({ line, h }: { line: Line; h?: ChordHandlers }) {
                 onMouseEnter={(e) => h?.onEnter(c, e.currentTarget)}
                 onMouseLeave={() => h?.onLeave()}
                 onClick={(e) => h?.onTap(c, e.currentTarget)}
+                title={label(c) !== c ? c : undefined}
               >
-                {c}
+                {label(c)}
               </button>
             ))}
           </span>
@@ -59,8 +60,10 @@ export function SectionLabel({ s }: { s: Pick<Section, "label" | "type"> }) {
   );
 }
 
-export function ChordSheet({ sections, fontSize = 17, interactive = true }: { sections: Section[]; fontSize?: number; interactive?: boolean }) {
+/** numberKey: show chords as numbers of that key (C -> 1, Em -> 3m); hover still shows the real chord. */
+export function ChordSheet({ sections, fontSize = 17, interactive = true, numberKey }: { sections: Section[]; fontSize?: number; interactive?: boolean; numberKey?: string }) {
   const pop = useChordPopover();
+  const label = (c: string) => (numberKey ? toNumber(c, numberKey) : c);
   return (
     <div style={{ fontSize }} className="leading-snug">
       {sections.map((s, i) => (
@@ -69,7 +72,7 @@ export function ChordSheet({ sections, fontSize = 17, interactive = true }: { se
             <SectionLabel s={s} />
           </div>
           {s.lines.map((l, k) => (
-            <SheetLine key={k} line={l} h={interactive ? pop.handlers : undefined} />
+            <SheetLine key={k} line={l} h={interactive ? pop.handlers : undefined} label={label} />
           ))}
         </section>
       ))}

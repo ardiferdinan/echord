@@ -1,5 +1,5 @@
 import { Note } from "tonal";
-import { FRETS_ON_CHORD, voicingNotes, type GuitarVoicing } from "@/lib/voicing";
+import { FRETS_ON_CHORD, THUMB, voicingNotes, type GuitarVoicing } from "@/lib/voicing";
 
 /** Chord box in the chords-db / react-chords convention: 4 frets, finger numbers, barre vs capo, notes below. */
 export function GuitarDiagram({ v, size = 1, notes = false }: { v: GuitarVoicing; size?: number; notes?: boolean }) {
@@ -44,7 +44,7 @@ export function GuitarDiagram({ v, size = 1, notes = false }: { v: GuitarVoicing
           <g key={s}>
             <circle cx={x(s)} cy={yMid(f)} r={7} fill={v.capo && v.barres.includes(f) ? "var(--ink)" : "var(--brand)"} />
             {v.fingers?.[s] ? (
-              <text x={x(s)} y={yMid(f) + 3.5} fontSize="9.5" textAnchor="middle" fill="var(--bg)" fontWeight="700">{v.fingers[s]}</text>
+              <text x={x(s)} y={yMid(f) + 3.5} fontSize="9.5" textAnchor="middle" fill="var(--bg)" fontWeight="700">{v.fingers[s] === THUMB ? "T" : v.fingers[s]}</text>
             ) : null}
           </g>
         ),

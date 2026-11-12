@@ -21,5 +21,17 @@ async function Song({ params }: Pick<PageProps<"/songs/[slug]">, "params">) {
   await connection();
   const song = await getSong((await params).slug);
   if (!song) notFound();
+  if (!song.preview_url && song.deezer_id) Object.assign(song, await deezerPreview(song.deezer_id));
   return <SongView song={song} />;
+}
+
+/** Deezer preview links expire, so ask for a fresh one on each view (no player if Deezer is slow). */
+async function deezerPreview(id: number) {
+  try {
+    const res = await fetch(`https://api.deezer.com/track/${id}`, { signal: AbortSignal.timeout(2500) });
+    const t = (await res.json()) as { preview?: string; link?: string };
+    return t.preview ? { preview_url: t.preview, listen_url: t.link } : {};
+  } catch {
+    return {};
+  }
 }

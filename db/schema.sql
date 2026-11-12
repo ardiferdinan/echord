@@ -22,6 +22,8 @@ alter table songs add column if not exists artwork_url text;
 alter table songs add column if not exists preview_url text;
 alter table songs add column if not exists apple_url text;
 alter table songs add column if not exists enriched_at timestamptz;
+-- fallback when iTunes has no match: Deezer track (embed player; its preview links expire)
+alter table songs add column if not exists deezer_id bigint;
 
 -- shared setlist snapshots; token lets the creator update the same link
 create table if not exists shared_setlists (

@@ -150,6 +150,17 @@ export function detectKey(sections: Section[]) {
   return "";
 }
 
+// ---------- number system (Nashville / "chord angka") ----------
+const DEGREE = ["1", "b2", "2", "b3", "3", "4", "b5", "5", "b6", "6", "b7", "7"];
+
+/** Chord as a scale degree of the key: in C, G -> 5, Em -> 3m, Am7 -> 6m7, G/B -> 5/7, Bb -> b7. Minor keys count from their own tonic (Am: Am -> 1m, C -> b3). */
+export function toNumber(chord: string, key: string) {
+  const m = chord.match(CHORD_RE), k = key.match(/^([A-G][#b]?)/);
+  if (!m || !k || PC[m[1]] === undefined || PC[k[1]] === undefined) return chord;
+  const deg = (n: string) => DEGREE[(PC[n] - PC[k[1]] + 12) % 12];
+  return deg(m[1]) + m[2] + (m[3] && PC[m[3]] !== undefined ? "/" + deg(m[3]) : "");
+}
+
 export function uniqueChords(sections: Section[]) {
   return [...new Set(sections.flatMap((s) => s.lines.flatMap((l) => l.chords.map((c) => c.name))))];
 }

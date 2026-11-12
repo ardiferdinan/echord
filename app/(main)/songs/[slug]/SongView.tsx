@@ -2,16 +2,17 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { parseSections, transposeKey, transposeSections } from "@/lib/chordpro";
+import { detectKey, parseSections, transposeKey, transposeSections } from "@/lib/chordpro";
 import type { Song } from "@/lib/db";
 import { newItem, uid, useBandContext, useLocal, useSetlists } from "@/lib/storage";
 import { BandContextPicker, ChordSheet } from "@/components/ChordSheet";
-import { FontControl, TransposeControl } from "@/components/Controls";
+import { FontControl, NumbersControl, TransposeControl } from "@/components/Controls";
 import { Blob } from "@/components/Blob";
 
 export function SongView({ song }: { song: Song }) {
   const [transpose, setTranspose] = useState(0);
   const [font, setFont] = useLocal("echord:font", 17);
+  const [numbers, setNumbers] = useLocal("echord:numbers", false);
   const [ctx, setCtx] = useBandContext();
   const target = song.original_key ? transposeKey(song.original_key, transpose) : undefined;
   const sections = useMemo(() => transposeSections(parseSections(song.content), transpose, target), [song.content, transpose, target]);
@@ -57,9 +58,9 @@ export function SongView({ song }: { song: Song }) {
         {song.preview_url && (
           <div className="relative mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
             <audio controls preload="none" src={song.preview_url} className="h-10 w-full max-w-xs" aria-label={`Preview 30 detik ${song.title}`} />
-            {song.apple_url && (
-              <a href={song.apple_url} target="_blank" rel="noopener noreferrer" className="text-sm font-bold underline-offset-4 hover:underline">
-                Dengarkan di Apple Music ↗
+            {(song.apple_url || song.listen_url) && (
+              <a href={song.apple_url ?? song.listen_url!} target="_blank" rel="noopener noreferrer" className="text-sm font-bold underline-offset-4 hover:underline">
+                Dengarkan di {song.apple_url ? "Apple Music" : "Deezer"} ↗
               </a>
             )}
           </div>
@@ -69,6 +70,7 @@ export function SongView({ song }: { song: Song }) {
       <div className="glass z-20 -mx-4 mb-6 flex flex-wrap items-center gap-2 border-b border-line px-4 py-3 sm:sticky sm:top-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
         <TransposeControl value={transpose} onChange={setTranspose} originalKey={song.original_key} />
         <FontControl value={font} onChange={setFont} />
+        <NumbersControl value={numbers} onChange={setNumbers} />
         <BandContextPicker ctx={ctx} onChange={setCtx} />
         <div className="ml-auto">
           <AddToSetlist song={song} transpose={transpose} />
@@ -76,7 +78,7 @@ export function SongView({ song }: { song: Song }) {
       </div>
 
       <p className="mb-4 text-xs text-muted">Arahkan kursor (atau tap) ke chord untuk melihat diagram & saran voicing.</p>
-      <ChordSheet sections={sections} fontSize={font} />
+      <ChordSheet sections={sections} fontSize={font} numberKey={numbers ? target || detectKey(sections) : undefined} />
     </article>
   );
 }

@@ -101,6 +101,41 @@ function baseVoicings(root: string, quality: string): GuitarVoicing[] {
   return [...tagged, ...mov.filter((v) => !seen.has(key(v)))];
 }
 
+/** Finger value drawn as "T": thumb over the neck for a bass note on string 6 (D/F# T x 0 1 3 2). */
+export const THUMB = 5;
+
+/**
+ * Fingering for a built shape: thumb for a low string-6 bass, index barre when 3+ neighbouring strings
+ * share the lowest fret (A/C# x4222x = 3 1 1 1), otherwise one finger per fret in string order.
+ * null when it needs more than four fingers.
+ */
+function assignFingers(abs: number[], bassString: number): number[] | null {
+  const fingers = abs.map(() => 0);
+  let fretted = abs.flatMap((f, s) => (f > 0 ? [s] : []));
+  if (!fretted.length) return fingers;
+  const others = fretted.filter((s) => s !== 0);
+  if (bassString === 0 && abs[0] > 0 && others.length >= 3 && abs[0] <= Math.min(...others.map((s) => abs[s])) + 1) {
+    fingers[0] = THUMB;
+    fretted = others;
+  }
+  const min = Math.min(...fretted.map((s) => abs[s]));
+  const atMin = fretted.filter((s) => abs[s] === min);
+  // a barre needs the strings it covers to be fretted at >= that fret (no open string under it)
+  const barre = atMin.length >= 3 && abs.slice(atMin[0], atMin.at(-1)! + 1).every((f) => f >= min);
+  let last = 0;
+  for (const s of [...fretted].sort((a, b) => abs[a] - abs[b] || a - b)) {
+    if (barre && abs[s] === min) {
+      fingers[s] = 1;
+      last = 1;
+      continue;
+    }
+    const f = Math.max(last + 1, 1 + abs[s] - min);
+    if (f > 4) return null;
+    fingers[s] = last = f;
+  }
+  return fingers;
+}
+
 /**
  * Slash chord from a base shape: put the bass note on string 6, 5 or 4 within reach of the shape and
  * mute everything below it, keeping root + 3rd above. Gives the usual D/F# 2x0232, G/B x20003,
@@ -118,8 +153,8 @@ function withBass(v: GuitarVoicing, bass: number, need: number[]): GuitarVoicing
       const above = next.flatMap((x, i) => (i > s && x >= 0 ? [STRING_MIDI[i] + x] : []));
       if (above.length < 2 || above.some((m) => m <= STRING_MIDI[s] + f)) continue;
       if (!need.every((pc) => above.some((m) => m % 12 === pc))) continue;
-      const fingers = (v.fingers ?? v.frets.map(() => 0)).map((x, i) => (i <= s ? 0 : x));
-      return fromAbs(next, fingers);
+      const fingers = assignFingers(next, s);
+      if (fingers) return fromAbs(next, fingers);
     }
   }
   return null;

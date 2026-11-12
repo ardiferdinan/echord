@@ -11,6 +11,15 @@ const SONG = `{start_of_verse: Verse 1}
 [D]la [G/B]la
 {end_of_chorus}`;
 
+test("number system", async () => {
+  const { toNumber } = await import("./chordpro");
+  const inC = ["C", "G", "Em", "Am7", "F/A", "G/B", "Bb", "D7", "Fmaj7", "Dsus4"].map((c) => toNumber(c, "C"));
+  assert.deepEqual(inC, ["1", "5", "3m", "6m7", "4/6", "5/7", "b7", "27", "4maj7", "2sus4"]);
+  assert.deepEqual(["Bb", "Eb/G", "F", "Gm"].map((c) => toNumber(c, "Bb")), ["1", "4/6", "5", "6m"]);
+  assert.deepEqual(["Am", "C", "E7"].map((c) => toNumber(c, "Am")), ["1m", "b3", "57"]);
+  assert.equal(toNumber("N.C.", "C"), "N.C.");
+});
+
 test("parse sections", () => {
   const s = parseSections(SONG);
   assert.equal(s.length, 2);
@@ -178,6 +187,15 @@ test("enrich: strict iTunes match", async () => {
   assert.equal(pickMatch({ title: "Bapa Abraham", artist: null }, [r("Bapa Abraham", "Kids", "2010", "Children's Music")]), undefined);
   assert.ok(pickMatch({ title: "Ada Ampun Bapa Bagimu", artist: "Nikita" }, [r("Anak Bungsu (Ada Ampun Bapa Bagimu)", "Nikita")]));
   assert.equal(pickMatch({ title: "Live", artist: "Nikita" }, [r("Bapa (Live)", "Nikita")]), undefined);
+  assert.ok(pickMatch({ title: "Ajaib AnugrahMu", artist: "Maria Shandi" }, [r("Ajaib AnugerahMu", "Maria Shandi")])); // spelling drift
+  assert.equal(pickMatch({ title: "Kau Baik", artist: "NDC" }, [r("Kau Bapa", "NDC")]), undefined);
+  assert.equal(pickMatch({ title: "Aku Cinta PadaMu", artist: "Cornelia Agatha" }, [r("Aku Cinta Padamu", "Agatha Suci")]), undefined);
+  assert.ok(pickMatch({ title: "Kasih", artist: "Franky Sihombing" }, [r("Kasih", "Franky Sihombing & Friends")]));
+  const yes = [["Jeffrey S Tjandra", "Jeffry S. Tjandra"], ["Sidney Mohede", "Sydney Mohede"], ["True Worshippers Kiddy", "TW Kiddy"], ["Brian & Jen Johnson", "Jenn Johnson"]];
+  for (const [a, b] of yes) assert.ok(pickMatch({ title: "X Y", artist: a }, [r("X Y", b)]), `${a} = ${b}`);
+  assert.ok(pickMatch({ title: "Mata Hatiku", artist: "Jason & Nikita" }, [r("Mata Hatiku (feat. Nikita Natasha)", "Jason Irwan")]));
+  const no = [["Agnes Santoso", "Dwiki Santoso"], ["Hillsong Kids", "Vineyard Kids"], ["Sammy Simorangkir", "Sari Simorangkir"], ["Sound of Praise", "Praise Valley"], ["True Worshippers", "Eternal Worshippers"], ["Ps Leo David", "Leo Mikerichie"]];
+  for (const [a, b] of no) assert.equal(pickMatch({ title: "X Y", artist: a }, [r("X Y", b)]), undefined, `${a} ≠ ${b}`);
   assert.equal(bigArtwork("https://x/a.jpg/100x100bb.jpg"), "https://x/a.jpg/600x600bb.jpg");
 });
 
@@ -187,6 +205,11 @@ test("slash chords: common open shapes in any key, plus movable & power chords",
   const shapes = (c: string) => g(c).map(abs);
   for (const [c, want] of [["D/F#", "2x0232"], ["G/B", "x20003"], ["C/G", "332010"], ["C/E", "032010"], ["Am/G", "302210"], ["Bb/D", "xx0331"], ["D7/F#", "2x0212"], ["Am7/G", "302010"]] as const)
     assert.ok(shapes(c).includes(want), `${c}: ${shapes(c).join(" ")}`);
+  // fingering like the usual charts: thumb bass, index barre, one finger per fret
+  const fing = (c: string, shape: string) => g(c).find((v) => abs(v) === shape)?.fingers?.join("");
+  assert.equal(fing("D/F#", "2x0232"), "500132"); // T x 0 1 3 2
+  assert.equal(fing("D/B", "x20232"), "010243");
+  assert.equal(fing("A/C#", "x42220"), "031110");
   // every built slash voicing really has that bass as its lowest note
   for (const c of ["E/G#", "A/C#", "F/C", "Gmaj7/B", "Em/D", "Ab/Eb", "F#m/E"]) {
     const vs = g(c);

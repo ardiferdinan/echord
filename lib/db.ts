@@ -17,6 +17,8 @@ export type Song = {
   artwork_url?: string | null;
   preview_url?: string | null;
   apple_url?: string | null;
+  deezer_id?: number | null;
+  listen_url?: string; // filled at render time (Deezer), not stored
 };
 
 const db = () => {

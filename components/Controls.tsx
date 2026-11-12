@@ -14,6 +14,25 @@ export function TransposeControl({ value, onChange, originalKey }: { value: numb
   );
 }
 
+/** Abc <-> 123: chord names or numbers of the key (Nashville). */
+export function NumbersControl({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="inline-flex h-11 items-center rounded-full border border-line bg-surface p-1 text-[15px] sm:h-10 sm:text-sm" role="group" aria-label="Tampilan chord">
+      {([false, true] as const).map((n) => (
+        <button
+          key={String(n)}
+          onClick={() => onChange(n)}
+          aria-pressed={value === n}
+          title={n ? "Chord angka: 1 = kunci lagu, 5, 3m…" : "Nama chord"}
+          className={`h-full rounded-full px-3 font-display font-bold italic transition ${value === n ? "bg-brand text-on-brand" : "hover:bg-surface-2"}`}
+        >
+          {n ? "123" : "Abc"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function FontControl({ value, onChange }: { value: number; onChange: (n: number) => void }) {
   return (
     <div className="inline-flex h-11 items-center rounded-full border border-line bg-surface text-[15px] sm:h-10 sm:text-sm">
