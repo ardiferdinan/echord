@@ -26,13 +26,23 @@ export const ChevronIcon = ({ dir = "left", ...p }: P & { dir?: "left" | "right"
   <svg {...base(p)} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d={dir === "left" ? "m15 5-7 7 7 7" : "m9 5 7 7-7 7"} /></svg>
 );
 
-/** Echord mark: six dots, six strings; one is the root. */
-export function Mark({ className = "size-8" }: { className?: string }) {
-  const dots = [[7, 12], [12, 7], [17, 12], [12, 17], [12, 12], [7, 17]];
+/** Echord mark: a guitar pick pointing right (it is also a play button) with one echo arc behind it: ech(o) + chord. */
+export const MARK_PATHS = {
+  pick: "M13.2 6.5c-4.1 0-6.7 3.6-6.7 9.5s2.6 9.5 6.7 9.5c3.3 0 9.3-4.6 12.6-8 .8-.8.8-2.2 0-3-3.3-3.4-9.3-8-12.6-8Z",
+  echo: "M5 8.2C2.9 10.4 2 13 2 16s.9 5.6 3 7.8",
+};
+export function Mark({ className = "size-8", tile = false }: { className?: string; tile?: boolean }) {
+  const glyph = (
+    <>
+      <path d={MARK_PATHS.pick} fill="currentColor" />
+      <path d={MARK_PATHS.echo} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+    </>
+  );
+  if (!tile) return <svg viewBox="0 0 32 32" className={`text-brand ${className}`} aria-hidden>{glyph}</svg>;
   return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden>
-      <circle cx="12" cy="12" r="12" fill="var(--green)" />
-      {dots.map(([x, y], i) => <circle key={i} cx={x} cy={y} r={i === 4 ? 2.4 : 1.7} fill="#000" />)}
+    <svg viewBox="0 0 32 32" className={className} aria-hidden>
+      <rect width="32" height="32" rx="7" fill="var(--green)" />
+      <g transform="translate(4.6 4.5) scale(.72)" color="#000">{glyph}</g>
     </svg>
   );
 }

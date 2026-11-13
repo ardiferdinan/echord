@@ -12,6 +12,7 @@ type Player = {
   duration: number;
   volume: number;
   play: (t: Track) => void;
+  cue: (t: Track) => void;
   toggle: () => void;
   seek: (s: number) => void;
   setVolume: (v: number) => void;
@@ -35,10 +36,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (audio.current) audio.current.volume = volume;
   }, [volume]);
 
-  const play = async (t: Track) => {
+  const current = useRef<number | null>(null);
+
+  /** Fetch the preview for t and start it. A browser that blocks autoplay leaves it loaded and paused (the bar's play button starts it). */
+  const load = async (t: Track) => {
     const a = audio.current;
     if (!a) return;
-    if (track?.id === t.id && a.src) return void (a.paused ? a.play() : a.pause());
+    current.current = t.id;
     setTrack(t);
     setError(null);
     setLoading(true);
@@ -46,15 +50,30 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     try {
       const res = await fetch(`/api/preview/${t.id}`);
       const data = (await res.json()) as { url?: string; error?: string };
+      if (current.current !== t.id) return; // another song was picked meanwhile
       if (!data.url) throw new Error(data.error ?? "Preview tidak tersedia");
       a.src = data.url;
-      await a.play();
+      await a.play().catch((e: Error) => {
+        if (e.name !== "NotAllowedError") throw e;
+      });
     } catch (e) {
+      if (current.current !== t.id) return;
       setError((e as Error).message || "Preview gagal diputar");
       setPlaying(false);
     } finally {
-      setLoading(false);
+      if (current.current === t.id) setLoading(false);
     }
+  };
+
+  const play = (t: Track) => {
+    const a = audio.current;
+    if (a && current.current === t.id && a.src) return void (a.paused ? a.play() : a.pause());
+    load(t);
+  };
+
+  /** Opening a song page: start that song unless it is already the one loaded. */
+  const cue = (t: Track) => {
+    if (current.current !== t.id) load(t);
   };
 
   const value: Player = {
@@ -66,9 +85,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     duration,
     volume,
     play,
+    cue,
     toggle: () => {
       const a = audio.current;
-      if (!a?.src) return;
+      if (!a?.src) return void (track && load(track));
       if (a.paused) a.play();
       else a.pause();
     },

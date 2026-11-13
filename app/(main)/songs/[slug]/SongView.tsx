@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState, ViewTransition } from "react";
+import { useEffect, useMemo, useState, ViewTransition } from "react";
 import { detectKey, parseSections, transposeKey, transposeSections, type Section } from "@/lib/chordpro";
 import type { Song } from "@/lib/db";
 import { suggest } from "@/lib/voicing";
@@ -10,6 +10,7 @@ import { BandContextPicker, ChordSheet } from "@/components/ChordSheet";
 import { FontControl, NumbersControl, TransposeControl } from "@/components/Controls";
 import { GuitarDiagram, PianoDiagram } from "@/components/Diagrams";
 import { PlayButton } from "@/components/player/PlayButton";
+import { usePlayer } from "@/components/player/PlayerProvider";
 import { NoteIcon, PlusIcon } from "@/components/icons";
 import { artistHref } from "@/components/library";
 
@@ -21,6 +22,12 @@ export function SongView({ song }: { song: Song }) {
   const target = song.original_key ? transposeKey(song.original_key, transpose) : undefined;
   const sections = useMemo(() => transposeSections(parseSections(song.content), transpose, target), [song.content, transpose, target]);
   const playable = !!(song.preview_url || song.deezer_id);
+  // picking a song starts its preview in the player bar
+  const { cue } = usePlayer();
+  useEffect(() => {
+    if (playable) cue({ id: song.id, slug: song.slug, title: song.title, artist: song.artist, artwork_url: song.artwork_url });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per song; cue ignores the song already loaded
+  }, [song.id, playable]);
   const meta = [song.album, song.release_year, target && `Kunci ${target}`, song.bpm && `${song.bpm} BPM`].filter(Boolean);
 
   return (

@@ -7,7 +7,7 @@ export function LoginForm({ next }: { next: Promise<string> }) {
   const [error, action, pending] = useActionState(login, null);
   return (
     <form action={action} className="w-full max-w-sm rounded-lg bg-panel px-8 py-10 text-center shadow-2xl shadow-black/60 sm:px-12">
-      <Mark className="mx-auto size-12" />
+      <Mark tile className="mx-auto size-14" />
       <h1 className="mt-6 text-3xl font-black tracking-[-0.03em]">Masuk ke Echord</h1>
       <p className="mt-2 text-sm text-muted">Perpustakaan chord pribadi.</p>
       <input type="hidden" name="next" value={use(next)} />

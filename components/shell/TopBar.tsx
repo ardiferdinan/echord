@@ -20,7 +20,7 @@ export function TopBar() {
   const arrow = "hidden size-8 place-items-center rounded-full bg-black/70 text-ink transition hover:scale-[1.06] lg:grid";
   return (
     <header className={`sticky top-0 z-30 flex h-16 items-center gap-2 px-4 transition-colors duration-300 sm:px-6 ${solid ? "bg-[#101010]/95 backdrop-blur-md" : "bg-transparent"}`}>
-      <Link href="/" className="lg:hidden" aria-label="Echord beranda"><Mark className="size-8" /></Link>
+      <Link href="/" className="lg:hidden" aria-label="Echord beranda"><Mark tile className="size-9" /></Link>
       <button onClick={() => router.back()} className={arrow} aria-label="Kembali"><ChevronIcon className="size-4" /></button>
       <button onClick={() => router.forward()} className={arrow} aria-label="Maju"><ChevronIcon dir="right" className="size-4" /></button>
       <Suspense fallback={<Search q="" />}>
