@@ -6,6 +6,7 @@ import { transposeKey } from "@/lib/chordpro";
 import { uid, useHydrated, useSetlists, type Setlist } from "@/lib/storage";
 import { ChordSheet } from "./ChordSheet";
 import { arranged } from "./SetlistEditor";
+import { Mosaic } from "./shell/Mosaic";
 
 export function SharedSetlist({ setlist, shareId }: { setlist: Setlist; shareId: string }) {
   const [mine, setMine] = useSetlists();
@@ -22,40 +23,41 @@ export function SharedSetlist({ setlist, shareId }: { setlist: Setlist; shareId:
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-end gap-3">
+      <div className="mb-6 flex flex-wrap items-end gap-5 pt-6">
+        <Mosaic covers={setlist.items.map((i) => i.artwork)} className="size-36 shadow-2xl shadow-black/60 sm:size-48" rounded="rounded-md" />
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium uppercase tracking-wider text-accent">Setlist dibagikan</p>
-          <h1 className="display text-4xl sm:text-5xl">{setlist.name}</h1>
+          <p className="text-sm font-semibold">Setlist dibagikan</p>
+          <h1 className="headline mt-2 text-[clamp(36px,6vw,80px)]">{setlist.name}</h1>
           <p className="mt-1 text-sm text-muted">
             {setlist.date ? new Date(setlist.date).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" }) + " · " : ""}
             {setlist.items.length} lagu · diperbarui {new Date(setlist.updatedAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
           </p>
         </div>
         {own ? (
-          <Link href={`/setlists/${own.id}`} className="btn">✎ Edit (setlist kamu)</Link>
+          <Link href={`/setlists/${own.id}`} className="btn">Edit setlist kamu</Link>
         ) : (
           <button className="btn" onClick={saveCopy}>Simpan salinan</button>
         )}
-        <Link href={`/s/${shareId}/play`} className="btn btn-primary px-4 py-2">▶ Stage mode</Link>
+        <Link href={`/s/${shareId}/play`} className="btn btn-primary h-12 px-6 text-base sm:h-12">Mulai stage</Link>
       </div>
 
-      <ol className="space-y-2">
+      <ol className="space-y-1">
         {setlist.items.map((item, n) => {
           const sections = arranged(item);
           const key = item.originalKey ? transposeKey(item.originalKey, item.transpose) : null;
           return (
-            <li key={item.id} className="card">
+            <li key={item.id} className={`rounded-md transition ${open === item.id ? "bg-white/5" : "hover:bg-white/10"}`}>
               <button className="flex w-full items-center gap-3 p-3 text-left" onClick={() => setOpen(open === item.id ? null : item.id)} aria-expanded={open === item.id}>
                 <span className="w-5 text-right text-sm tabular-nums text-muted">{n + 1}</span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{item.title}</span>
+                  <span className="block truncate font-semibold">{item.title}</span>
                   <span className="block truncate text-xs text-muted">{sections.map((s) => s.label).join(" → ")}</span>
                 </span>
-                {key && <span className="rounded-md bg-accent-soft px-2 py-1 text-sm font-bold text-accent">{key}</span>}
+                {key && <span className="text-sm font-bold text-accent">{key}</span>}
               </button>
               {open === item.id && (
-                <div className="border-t border-line p-4">
-                  {item.notes && <p className="mb-4 rounded-lg bg-accent-soft px-3 py-2 text-sm">📝 {item.notes}</p>}
+                <div className="px-4 pb-5 pt-1 sm:pl-12">
+                  {item.notes && <p className="mb-4 rounded-md bg-black/30 px-3 py-2 text-sm">{item.notes}</p>}
                   <ChordSheet sections={sections} fontSize={16} />
                 </div>
               )}

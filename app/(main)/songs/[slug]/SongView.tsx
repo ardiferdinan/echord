@@ -1,85 +1,127 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { detectKey, parseSections, transposeKey, transposeSections } from "@/lib/chordpro";
+import { useMemo, useState, ViewTransition } from "react";
+import { detectKey, parseSections, transposeKey, transposeSections, type Section } from "@/lib/chordpro";
 import type { Song } from "@/lib/db";
+import { suggest } from "@/lib/voicing";
 import { newItem, uid, useBandContext, useLocal, useSetlists } from "@/lib/storage";
 import { BandContextPicker, ChordSheet } from "@/components/ChordSheet";
 import { FontControl, NumbersControl, TransposeControl } from "@/components/Controls";
-import { Blob } from "@/components/Blob";
+import { GuitarDiagram, PianoDiagram } from "@/components/Diagrams";
+import { PlayButton } from "@/components/player/PlayButton";
+import { NoteIcon, PlusIcon } from "@/components/icons";
+import { artistHref } from "@/components/library";
 
 export function SongView({ song }: { song: Song }) {
   const [transpose, setTranspose] = useState(0);
-  const [font, setFont] = useLocal("echord:font", 17);
+  const [font, setFont] = useLocal("echord:font", 19);
   const [numbers, setNumbers] = useLocal("echord:numbers", false);
   const [ctx, setCtx] = useBandContext();
   const target = song.original_key ? transposeKey(song.original_key, transpose) : undefined;
   const sections = useMemo(() => transposeSections(parseSections(song.content), transpose, target), [song.content, transpose, target]);
+  const playable = !!(song.preview_url || song.deezer_id);
+  const meta = [song.album, song.release_year, target && `Kunci ${target}`, song.bpm && `${song.bpm} BPM`].filter(Boolean);
 
   return (
     <article>
-      <Blob
-        fill="var(--brand)"
-        radius={32}
-        className="mb-8 min-h-[168px] p-6 pr-32 text-on-brand sm:min-h-[200px] sm:p-8 sm:pr-44"
-        slots={{
-          br: {
-            node: (
-              <div className="grid size-24 place-items-center rounded-3xl bg-dark text-on-dark sm:size-32">
-                <span className="text-center">
-                  <span className="display block text-4xl italic sm:text-5xl">{target ?? "—"}</span>
-                  <span className="text-xs font-medium opacity-70">{transpose ? `asli ${song.original_key}` : "kunci asli"}</span>
-                </span>
-              </div>
-            ),
-          },
-        }}
-      >
-        <span className="dots pointer-events-none absolute right-40 top-6 hidden h-20 w-32 opacity-50 sm:block" aria-hidden />
-        <div className="relative flex flex-col items-start gap-4 sm:flex-row sm:gap-6">
-          {song.artwork_url && (
-            <Image src={song.artwork_url} alt={`Cover ${song.album ?? song.title}`} width={112} height={112} className="size-16 shrink-0 rounded-2xl shadow-lg shadow-black/20 sm:size-28" />
+      {/* header: the cover, blurred, is the backdrop */}
+      <header className="relative -mx-4 -mt-16 overflow-clip px-4 pb-6 pt-24 sm:-mx-6 sm:px-6">
+        {song.artwork_url && (
+          <Image src={song.artwork_url} alt="" fill sizes="100vw" aria-hidden className="scale-125 object-cover opacity-60 blur-3xl saturate-150" />
+        )}
+        <span aria-hidden className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/30 to-panel" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:gap-6">
+          {song.artwork_url ? (
+            <ViewTransition name={`cover-${song.id}`} share="morph" default="none">
+              <Image src={song.artwork_url} alt={`Cover ${song.album ?? song.title}`} width={232} height={232} priority className="size-44 shrink-0 rounded-md object-cover shadow-2xl shadow-black/60 sm:size-[232px]" />
+            </ViewTransition>
+          ) : (
+            <span className="grid size-44 shrink-0 place-items-center rounded-md bg-gradient-to-br from-[#3a3a3a] to-[#1a1a1a] text-6xl font-black text-muted shadow-2xl shadow-black/60 sm:size-[232px]">
+              {song.original_key || <NoteIcon className="size-16" />}
+            </span>
           )}
           <div className="min-w-0">
-            <h1 className="display text-[clamp(32px,6vw,56px)] uppercase">{song.title}</h1>
-            <p className="mt-3 font-medium">
-              {song.artist}
-              {song.bpm ? ` · ${song.bpm} BPM` : ""}
+            <p className="text-sm font-semibold">Lagu</p>
+            <h1 className="headline mt-2 text-[clamp(36px,6vw,88px)]">{song.title}</h1>
+            <p className="mt-4 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-ink/90">
+              {song.artist ? (
+                <Link href={artistHref(song.artist)} className="font-bold text-ink hover:underline">{song.artist}</Link>
+              ) : (
+                <span className="font-bold">Tanpa nama penyanyi</span>
+              )}
+              {meta.map((m) => (
+                <span key={String(m)} className="before:mr-1.5 before:content-['•']">{m}</span>
+              ))}
             </p>
-            {song.album && (
-              <p className="mt-0.5 text-sm opacity-80">
-                {song.album}
-                {song.release_year ? ` · ${song.release_year}` : ""}
-              </p>
-            )}
           </div>
         </div>
-        {song.preview_url && (
-          <div className="relative mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
-            <audio controls preload="none" src={song.preview_url} className="h-10 w-full max-w-xs" aria-label={`Preview 30 detik ${song.title}`} />
-            {(song.apple_url || song.listen_url) && (
-              <a href={song.apple_url ?? song.listen_url!} target="_blank" rel="noopener noreferrer" className="text-sm font-bold underline-offset-4 hover:underline">
-                Dengarkan di {song.apple_url ? "Apple Music" : "Deezer"} ↗
-              </a>
-            )}
-          </div>
-        )}
-      </Blob>
+      </header>
 
-      <div className="glass z-20 -mx-4 mb-6 flex flex-wrap items-center gap-2 border-b border-line px-4 py-3 sm:sticky sm:top-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+      {/* actions: one row that scrolls sideways on phones */}
+      <div className="sticky top-16 z-20 -mx-4 flex items-center gap-3 overflow-x-auto bg-panel/95 px-4 py-4 backdrop-blur-md sm:-mx-6 sm:gap-4 sm:px-6">
+        {playable && <PlayButton track={song} size="lg" />}
+        <AddToSetlist song={song} transpose={transpose} />
+        <span className="mx-1 h-8 w-px shrink-0 bg-line" aria-hidden />
         <TransposeControl value={transpose} onChange={setTranspose} originalKey={song.original_key} />
-        <FontControl value={font} onChange={setFont} />
         <NumbersControl value={numbers} onChange={setNumbers} />
-        <BandContextPicker ctx={ctx} onChange={setCtx} />
-        <div className="ml-auto">
-          <AddToSetlist song={song} transpose={transpose} />
-        </div>
+        <FontControl value={font} onChange={setFont} />
+        {song.apple_url && (
+          <a href={song.apple_url} target="_blank" rel="noopener noreferrer" className="ml-auto shrink-0 text-sm font-bold text-muted hover:text-ink hover:underline">
+            Apple Music ↗
+          </a>
+        )}
       </div>
 
-      <p className="mb-4 text-xs text-muted">Arahkan kursor (atau tap) ke chord untuk melihat diagram & saran voicing.</p>
-      <ChordSheet sections={sections} fontSize={font} numberKey={numbers ? target || detectKey(sections) : undefined} />
+      <div className="mt-4 grid gap-10 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="min-w-0">
+          <details className="group mb-6 w-fit">
+            <summary className="flex h-9 cursor-pointer list-none items-center gap-2 rounded-full bg-surface-2 px-4 text-sm font-semibold text-muted hover:text-ink [&::-webkit-details-marker]:hidden">
+              Pengaturan band <span className="transition group-open:rotate-180" aria-hidden>▾</span>
+            </summary>
+            <div className="mt-3">
+              <BandContextPicker ctx={ctx} onChange={setCtx} />
+              <p className="mt-2 text-xs text-muted">Dipakai untuk saran voicing saat kamu membuka chord.</p>
+            </div>
+          </details>
+          <ChordSheet sections={sections} fontSize={font} numberKey={numbers ? target || detectKey(sections) : undefined} />
+        </div>
+        <ChordRail sections={sections} />
+      </div>
     </article>
+  );
+}
+
+/** Desktop rail: every chord in the song (in the current key) with its first voicing. */
+function ChordRail({ sections }: { sections: Section[] }) {
+  const [ctx] = useBandContext();
+  const chords = useMemo(() => [...new Set(sections.flatMap((s) => s.lines.flatMap((l) => l.chords.map((c) => c.name))))].slice(0, 16), [sections]);
+  if (!chords.length) return null;
+  return (
+    <aside className="hidden xl:block" aria-label="Chord di lagu ini">
+      <div className="sticky top-40 rounded-lg bg-card p-4">
+        <h2 className="font-bold">Chord di lagu ini</h2>
+        <p className="text-xs text-muted">{ctx.instrument === "guitar" ? "Gitar" : "Piano"} · posisi pertama</p>
+        <ul tabIndex={0} aria-label="Diagram chord" className="mt-3 grid max-h-[calc(100svh-18rem)] grid-cols-2 gap-x-2 gap-y-3 overflow-y-auto rounded-md">
+          {chords.map((c) => {
+            const s = suggest(c, ctx);
+            const v = s.guitar[0];
+            return (
+              <li key={c} className="flex flex-col items-center rounded-md p-1">
+                <span className="text-sm font-bold text-accent">{c}</span>
+                {ctx.instrument === "guitar" ? (
+                  v ? <GuitarDiagram v={v} size={0.62} /> : <span className="py-6 text-xs text-muted">Belum ada</span>
+                ) : s.piano?.right.length ? (
+                  <PianoDiagram left={s.piano.left} right={s.piano.right} />
+                ) : (
+                  <span className="py-6 text-xs text-muted">Belum ada</span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </aside>
   );
 }
 
@@ -100,15 +142,23 @@ function AddToSetlist({ song, transpose }: { song: Song; transpose: number }) {
     setOpen(false);
   };
 
-  if (added) return <Link href={`/setlists/${added}`} className="btn">✓ Ditambahkan — buka setlist</Link>;
+  if (added) return <Link href={`/setlists/${added}`} className="btn shrink-0">Ditambahkan · buka setlist</Link>;
   return (
-    <div className="relative">
-      <button className="btn btn-primary" onClick={() => setOpen(!open)} aria-expanded={open}>+ Setlist</button>
+    <div className="relative shrink-0">
+      <button
+        className="grid size-10 place-items-center rounded-full border-2 border-muted text-muted transition hover:scale-[1.06] hover:border-ink hover:text-ink"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-label="Tambahkan ke setlist"
+        title="Tambahkan ke setlist"
+      >
+        <PlusIcon className="size-5" />
+      </button>
       {open && (
-        <div className="absolute right-0 z-30 mt-1 w-60 card p-1 shadow-xl shadow-black/10">
-          <button onClick={() => add(null)} className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-accent hover:bg-surface-2">+ Buat setlist baru</button>
+        <div className="fixed z-40 mt-2 w-64 rounded-md bg-[#282828] p-1 shadow-2xl shadow-black/60" role="menu">
+          <button role="menuitem" onClick={() => add(null)} className="w-full rounded-sm px-3 py-2.5 text-left text-sm font-semibold hover:bg-white/10">+ Setlist baru</button>
           {setlists.map((s) => (
-            <button key={s.id} onClick={() => add(s.id)} className="w-full truncate rounded-lg px-3 py-2 text-left text-sm hover:bg-surface-2">
+            <button role="menuitem" key={s.id} onClick={() => add(s.id)} className="w-full truncate rounded-sm px-3 py-2.5 text-left text-sm hover:bg-white/10">
               {s.name} <span className="text-muted">· {s.items.length} lagu</span>
             </button>
           ))}

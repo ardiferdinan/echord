@@ -1,12 +1,32 @@
-import { Frame, SearchPill } from "@/components/Frame";
+import { ViewTransition } from "react";
+import { PlayerProvider } from "@/components/player/PlayerProvider";
+import { PlayerBar } from "@/components/player/PlayerBar";
+import { Sidebar } from "@/components/shell/Sidebar";
+import { TopBar } from "@/components/shell/TopBar";
+import { TabBar } from "@/components/shell/TabBar";
 
-/** Every page except home: the same blue frame, page content on a light sheet inside it. */
+/**
+ * App shell: sidebar + scrolling main panel on black, player bar along the bottom (desktop);
+ * full-bleed main panel, mini player and tabs on phones. The player lives here so audio survives navigation.
+ */
 export default function MainLayout({ children }: LayoutProps<"/">) {
   return (
-    <div className="p-3 sm:p-4">
-      <Frame search={<SearchPill />} className="flex min-h-[calc(100svh-2rem)] flex-col px-2 pb-2 pt-[84px] sm:px-3 sm:pb-3 sm:pt-[92px]">
-        <div className="flex-1 rounded-[30px] bg-bg p-4 text-ink sm:p-6 lg:p-8">{children}</div>
-      </Frame>
-    </div>
+    <PlayerProvider>
+      <div className="grid h-svh grid-rows-[minmax(0,1fr)_auto] lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-2 lg:p-2 lg:pb-0">
+        <aside className="hidden min-h-0 lg:flex lg:flex-col">
+          <Sidebar />
+        </aside>
+        <main id="content" className="min-h-0 overflow-y-auto overscroll-contain bg-panel lg:rounded-lg" data-scroll>
+          <TopBar />
+          <ViewTransition default="page">
+            <div className="px-4 pb-12 sm:px-6">{children}</div>
+          </ViewTransition>
+        </main>
+        <div className="bg-black px-2 pt-1 lg:col-span-2 lg:p-0">
+          <PlayerBar />
+          <TabBar />
+        </div>
+      </div>
+    </PlayerProvider>
   );
 }

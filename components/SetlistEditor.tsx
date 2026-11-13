@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, horizontalListSortingStrategy, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -10,7 +11,8 @@ import { newItem, useHydrated, useSetlists, type Setlist, type SetlistItem } fro
 import { shareSetlist } from "@/app/(main)/setlists/actions";
 import { ChordSheet, SECTION_COLOR } from "./ChordSheet";
 import { TransposeControl } from "./Controls";
-import { Blob } from "./Blob";
+import { Mosaic } from "./shell/Mosaic";
+import { PlayIcon, TrashIcon } from "./icons";
 
 export function arranged(item: SetlistItem): Section[] {
   const secs = parseSections(item.content);
@@ -30,6 +32,7 @@ export function SetlistEditor({ id }: { id: string }) {
   const [setlists, setSetlists] = useSetlists();
   const mounted = useHydrated();
   const sensors = useDnd();
+  const router = useRouter();
   const setlist = setlists.find((s) => s.id === id);
   if (!mounted) return null;
   if (!setlist)
@@ -54,56 +57,57 @@ export function SetlistEditor({ id }: { id: string }) {
 
   return (
     <div>
-      <Blob
-        fill="var(--brand)"
-        radius={32}
-        className="z-20 mb-8 min-h-[200px] p-6 pr-32 text-on-brand sm:min-h-[220px] sm:p-8 sm:pr-44"
-        slots={{
-          br: {
-            node: (
-              <Link
-                href={`/setlists/${id}/play`}
-                aria-disabled={!setlist.items.length}
-                className={`grid size-24 place-items-center rounded-3xl bg-dark text-on-dark sm:size-32 ${setlist.items.length ? "transition hover:brightness-110" : "pointer-events-none"}`}
-              >
-                <span className={`text-center ${setlist.items.length ? "" : "opacity-40"}`}>
-                  <span className="display block text-4xl sm:text-5xl">▶</span>
-                  <span className="font-display text-sm font-bold italic">Stage mode</span>
-                </span>
-              </Link>
-            ),
-          },
-        }}
-      >
-        <span className="dots pointer-events-none absolute right-44 top-6 hidden h-24 w-40 opacity-50 sm:block" aria-hidden />
-        <Link href="/setlists" className="relative text-sm font-medium opacity-80 hover:opacity-100">← Semua setlist</Link>
-        <textarea
-          value={setlist.name}
-          rows={1}
-          onChange={(e) => update((s) => ({ ...s, name: e.target.value.replace(/\n/g, " ") }))}
-          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), e.currentTarget.blur())}
-          aria-label="Nama setlist"
-          className="display relative mt-2 block w-full resize-none rounded-2xl bg-transparent text-[clamp(32px,6vw,56px)] uppercase outline-none [field-sizing:content] placeholder:text-on-brand/60 hover:bg-white/10 focus:bg-white/10 sm:text-6xl"
-        />
-        <div className="relative mt-3 flex flex-wrap items-center gap-3 font-medium">
-          <input
-            type="date"
-            value={setlist.date ?? ""}
-            onChange={(e) => update((s) => ({ ...s, date: e.target.value }))}
-            className="h-10 rounded-full bg-on-brand/15 px-3 text-sm [color-scheme:dark] hover:bg-on-brand/25"
-            aria-label="Tanggal"
+      <header className="-mx-4 -mt-16 flex flex-col gap-5 bg-gradient-to-b from-[#2a4d3a] to-panel px-4 pb-6 pt-24 sm:-mx-6 sm:flex-row sm:items-end sm:gap-6 sm:px-6">
+        <Mosaic covers={setlist.items.map((i) => i.artwork)} className="size-44 shadow-2xl shadow-black/60 sm:size-[232px]" rounded="rounded-md" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Setlist</p>
+          <textarea
+            value={setlist.name}
+            rows={1}
+            onChange={(e) => update((s) => ({ ...s, name: e.target.value.replace(/\n/g, " ") }))}
+            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), e.currentTarget.blur())}
+            aria-label="Nama setlist"
+            className="headline mt-2 block w-full resize-none rounded-md bg-transparent text-[clamp(36px,6vw,88px)] outline-none [field-sizing:content] hover:bg-white/5 focus:bg-white/10"
           />
-          <span className="text-sm">{setlist.items.length} lagu</span>
-          <ShareButton
-            setlist={setlist}
-            onShared={(share) => setSetlists((all) => all.map((s) => (s.id === id ? { ...s, share, sharedAt: s.updatedAt } : s)))}
-          />
+          <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm">
+            <input
+              type="date"
+              value={setlist.date ?? ""}
+              onChange={(e) => update((s) => ({ ...s, date: e.target.value }))}
+              className="h-8 rounded-full bg-black/30 px-3 text-sm [color-scheme:dark] hover:bg-black/50"
+              aria-label="Tanggal"
+            />
+            <span className="text-ink/90">• {setlist.items.length} lagu</span>
+          </div>
         </div>
-      </Blob>
+      </header>
+
+      <div className="flex flex-wrap items-center gap-4 py-6">
+        <Link
+          href={`/setlists/${id}/play`}
+          aria-disabled={!setlist.items.length}
+          aria-label="Mulai stage mode"
+          className={`grid size-14 place-items-center rounded-full bg-brand text-on-brand shadow-lg shadow-black/40 transition ${setlist.items.length ? "hover:scale-[1.06]" : "pointer-events-none opacity-40"}`}
+        >
+          <PlayIcon className="size-6 translate-x-[1px]" />
+        </Link>
+        <ShareButton
+          setlist={setlist}
+          onShared={(share) => setSetlists((all) => all.map((s) => (s.id === id ? { ...s, share, sharedAt: s.updatedAt } : s)))}
+        />
+        <button
+          className="btn-icon"
+          onClick={() => confirm(`Hapus setlist "${setlist.name}"?`) && (setSetlists((all) => all.filter((s) => s.id !== id)), router.push("/setlists"))}
+          aria-label="Hapus setlist"
+          title="Hapus setlist"
+        >
+          <TrashIcon className="size-5" />
+        </button>
+      </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={setlist.items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-          <ol className="space-y-5">
+          <ol className="space-y-1">
             {setlist.items.map((item, n) => (
               <SongCard
                 key={item.id}
@@ -133,51 +137,38 @@ function SongCard({ item, n, onChange, onRemove }: { item: SetlistItem; n: numbe
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
-      className={`relative rounded-3xl ${isDragging ? "z-10 ring-2 ring-brand" : ""}`}
+      className={`relative rounded-md transition ${open ? "bg-white/5" : "hover:bg-white/10"} ${isDragging ? "z-10 bg-card-hover ring-2 ring-brand" : ""}`}
     >
-      <Blob
-        fill="var(--surface-2)"
-        radius={24}
-        gap={8}
-        slots={{
-          tl: {
-            node: (
-              <button
-                {...attributes}
-                {...listeners}
-                className={`grid size-16 cursor-grab touch-none place-items-center rounded-[22px] text-on-brand active:cursor-grabbing ${n % 3 === 2 ? "bg-hot" : "bg-brand"}`}
-                aria-label={`Geser ${item.title} (urutan ${n})`}
-                title="Geser untuk mengubah urutan"
-              >
-                <span className="text-center leading-none">
-                  <span className="display block text-2xl italic">{String(n).padStart(2, "0")}</span>
-                  <span className="text-[10px] opacity-80">⠿</span>
-                </span>
-              </button>
-            ),
-          },
-        }}
-      >
-      <div className="flex min-h-[88px] items-center gap-2 py-3 pl-[84px] pr-3 sm:pr-4">
+      <div className="flex min-h-16 items-center gap-3 px-2 py-2 sm:px-3">
+        <button
+          {...attributes}
+          {...listeners}
+          className="grid h-12 w-8 shrink-0 cursor-grab touch-none place-items-center rounded text-[15px] tabular-nums text-muted hover:text-ink active:cursor-grabbing"
+          aria-label={`Geser ${item.title} (urutan ${n})`}
+          title="Geser untuk mengubah urutan"
+        >
+          {n}
+        </button>
+        <Mosaic covers={[item.artwork]} className="size-12" />
         <button className="min-w-0 flex-1 text-left" onClick={() => setOpen(!open)} aria-expanded={open}>
-          <span className="block truncate font-display text-base font-black uppercase sm:text-lg">{item.title}</span>
+          <span className="block truncate font-semibold">{item.title}</span>
           <span className="block truncate text-xs text-muted">
             {item.order.map((id) => byId.get(id)?.label).filter(Boolean).join(" → ") || "Belum ada section"}
           </span>
         </button>
         <TransposeControl value={item.transpose} onChange={(t) => onChange({ transpose: t })} originalKey={item.originalKey} />
-        <button className="btn-icon hidden border border-line sm:grid" onClick={() => setOpen(!open)} aria-label={open ? "Tutup" : "Atur"}>{open ? "▴" : "▾"}</button>
+        <button className="btn-icon hidden sm:grid" onClick={() => setOpen(!open)} aria-label={open ? "Tutup" : "Atur alur"}>{open ? "▴" : "▾"}</button>
       </div>
 
       {open && (
-        <div className="border-t border-line p-4 pt-5">
+        <div className="px-3 pb-5 pt-2 sm:pl-[104px]">
           <SectionArranger sections={sections} order={item.order} onChange={(order) => onChange({ order })} />
 
           <div className="mt-3 flex flex-wrap gap-2">
             <button className="btn" onClick={() => setEditing(!editing)}>{editing ? "Selesai edit" : "✎ Edit chord & lirik"}</button>
             <button className="btn" onClick={() => onChange({ order: sections.map((s) => s.id) })}>Reset urutan</button>
             <Link href={`/songs/${item.slug}`} className="btn">Lagu asli</Link>
-            <button className="btn ml-auto text-hot" onClick={() => confirm(`Hapus "${item.title}" dari setlist?`) && onRemove()}>Hapus</button>
+            <button className="btn ml-auto border-hot/50 text-hot hover:border-hot" onClick={() => confirm(`Hapus "${item.title}" dari setlist?`) && onRemove()}>Hapus dari setlist</button>
           </div>
 
           <textarea
@@ -203,13 +194,12 @@ function SongCard({ item, n, onChange, onRemove }: { item: SetlistItem; n: numbe
                 aria-label="ChordPro"
               />
             )}
-            <div className="rounded-lg bg-bg p-4">
+            <div className="rounded-md bg-black/30 p-4">
               <ChordSheet sections={arranged(item)} fontSize={15} />
             </div>
           </div>
         </div>
       )}
-      </Blob>
     </li>
   );
 }
@@ -246,7 +236,7 @@ function SectionArranger({ sections, order, onChange }: { sections: Section[]; o
             <select
               value=""
               onChange={(e) => e.target.value && onChange([...order, e.target.value])}
-              className="h-10 rounded-full border border-dashed border-line bg-transparent px-4 text-sm text-muted"
+              className="h-10 rounded-full bg-surface-2 px-4 text-sm font-semibold text-muted"
               aria-label="Tambah section"
             >
               <option value="">+ section</option>
@@ -268,7 +258,7 @@ function Chip({ id, s, onDup, onRemove }: { id: string; s: Section; onDup: () =>
     <span
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition, borderColor: color }}
-      className={`inline-flex h-10 items-center rounded-full border-2 bg-bg text-sm ${isDragging ? "z-10 shadow-lg" : ""}`}
+      className={`inline-flex h-10 items-center rounded-full border-2 bg-black/30 text-sm ${isDragging ? "z-10 shadow-lg" : ""}`}
     >
       <button {...attributes} {...listeners} className="h-full cursor-grab touch-none pl-4 pr-1 font-semibold active:cursor-grabbing" style={{ color }}>
         {s.label}
@@ -296,18 +286,22 @@ function AddSong({ onAdd }: { onAdd: (s: Song) => void }) {
   }, [q]);
 
   return (
-    <div className="mt-8 rounded-[28px] border-2 border-dashed border-line p-3">
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="+ Tambah lagu ke setlist: cari judul…" className="input" />
+    <div className="mt-10 border-t border-line pt-6">
+      <h2 className="text-2xl font-bold tracking-[-0.02em]">Tambahkan lagu ke setlist</h2>
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari judul atau penyanyi" aria-label="Cari lagu untuk ditambahkan" className="input mt-4 max-w-md rounded-md" />
       {err && <p className="mt-2 text-sm text-hot">{err}</p>}
       {q.trim() && results.length > 0 && (
-        <ul className="mt-2 divide-y divide-line">
+        <ul className="mt-3">
           {results.map((s) => (
             <li key={s.id}>
-              <button onClick={() => (onAdd(s), setQ(""))} className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-surface-2">
-                <span className="w-8 text-center text-sm font-bold text-accent">{s.original_key}</span>
-                <span className="min-w-0 flex-1 truncate">{s.title} <span className="text-muted">· {s.artist}</span></span>
-                <span className="text-sm text-accent">Tambah</span>
-              </button>
+              <div className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-white/10">
+                <Mosaic covers={[s.artwork_url]} className="size-10" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold">{s.title}</span>
+                  <span className="block truncate text-sm text-muted">{s.artist}{s.original_key ? ` · ${s.original_key}` : ""}</span>
+                </span>
+                <button onClick={() => (onAdd(s), setQ(""))} className="btn h-8 px-4 sm:h-8">Tambah</button>
+              </div>
             </li>
           ))}
         </ul>
@@ -337,15 +331,15 @@ function ShareButton({ setlist, onShared }: { setlist: Setlist; onShared: (share
   return (
     <div className="relative text-ink">
       <button
-        className={`btn px-4 py-2 ${dirty ? "border-brand text-accent" : ""}`}
+        className={`btn ${dirty ? "border-brand text-accent" : ""}`}
         disabled={busy || !setlist.items.length}
         onClick={() => (setlist.share && !dirty ? setOpen(!open) : share())}
       >
-        {busy ? "…" : dirty ? "⟳ Update link band" : "↗ Bagikan"}
+        {busy ? "…" : dirty ? "Update link band" : "Bagikan"}
       </button>
       {error && <p className="absolute right-0 mt-1 w-60 text-right text-xs text-hot">{error}</p>}
       {open && url && (
-        <div className="absolute right-0 z-30 mt-1 w-80 card p-3 shadow-xl shadow-black/10">
+        <div className="absolute left-0 z-30 mt-2 w-80 rounded-md bg-[#282828] p-3 shadow-2xl shadow-black/60">
           <p className="mb-2 text-sm font-medium">Link untuk anggota band</p>
           <div className="flex gap-1.5">
             <input readOnly value={url} onFocus={(e) => e.target.select()} className="input font-mono text-xs" aria-label="Link setlist" />

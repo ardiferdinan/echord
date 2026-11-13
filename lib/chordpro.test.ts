@@ -123,22 +123,6 @@ test("shared setlist is sanitized", async () => {
   assert.throws(() => sanitize({ items: "nope" } as never));
 });
 
-test("blob outline: every corner is a tangent arc, cuts produce one concave corner each", async () => {
-  const { blobPoints, roundedPath } = await import("./blob");
-  const pts = blobPoints(300, 200, { br: { w: 100, h: 60 } });
-  assert.equal(pts.length, 6); // L-shape
-  const d = roundedPath(pts, 28);
-  const arcs = [...d.matchAll(/A(\S+) \S+ 0 0 (\d)/g)].map((m) => [Number(m[1]), m[2]]);
-  assert.equal(arcs.length, 6);
-  assert.equal(arcs.filter(([, s]) => s === "0").length, 1); // exactly one concave fillet (the inner corner)
-  assert.ok(arcs.every(([r]) => (r as number) > 0)); // no zero-radius = no sharp tips
-  // radius clamps to half the shortest edge instead of overshooting
-  assert.ok(roundedPath(blobPoints(300, 200, { br: { w: 20, h: 60 } }), 28).includes("A10 10"));
-  // top-center cut (search pill): 8 vertices, 2 concave
-  const t = roundedPath(blobPoints(300, 200, { t: { w: 120, h: 50 } }), 28);
-  assert.equal([...t.matchAll(/0 0 0 /g)].length, 2);
-});
-
 test("chord library: every root × quality has guitar voicings and piano inversions", async () => {
   const { pianoInversions, guitarVoicings, CHORD_ROOTS, CHORD_QUALITIES } = await import("./voicing");
   assert.deepEqual(pianoInversions("C").map((v) => v.right), [["C4", "E4", "G4"], ["E4", "G4", "C5"], ["G3", "C4", "E4"]]);

@@ -64,6 +64,7 @@ export type SetlistItem = {
   transpose: number;
   order: string[]; // section ids; duplicates allowed (Reff 2x)
   notes?: string;
+  artwork?: string | null; // cover for the setlist mosaic (items saved before this field have none)
 };
 export type Setlist = {
   id: string;
@@ -81,7 +82,7 @@ export const useBandContext = () => useLocal<BandContext>("echord:band", DEFAULT
 
 export const uid = () => crypto.randomUUID().slice(0, 8);
 
-export function newItem(song: { id: number; slug: string; title: string; artist: string | null; original_key: string | null; content: string }, transpose = 0): SetlistItem {
+export function newItem(song: { id: number; slug: string; title: string; artist: string | null; original_key: string | null; content: string; artwork_url?: string | null }, transpose = 0): SetlistItem {
   return {
     id: uid(),
     songId: song.id,
@@ -92,5 +93,6 @@ export function newItem(song: { id: number; slug: string; title: string; artist:
     content: song.content,
     transpose,
     order: parseSections(song.content).map((s) => s.id),
+    artwork: song.artwork_url ?? null,
   };
 }

@@ -29,12 +29,12 @@ function SheetLine({ line, h, label }: { line: Line; h?: ChordHandlers; label: (
     <div className="flex flex-wrap items-end">
       {units(line).map((u, i) => (
         <span key={i} className="inline-flex flex-col">
-          <span className="h-[1.4em] pr-[0.5em] font-display font-bold italic tracking-wide text-accent">
+          <span className="h-[1.35em] pr-[0.5em] font-bold text-accent">
             {u.chords.map((c, k) => (
               <button
                 key={k}
                 type="button"
-                className="mr-1 cursor-pointer rounded px-0.5 -mx-0.5 hover:bg-accent-soft"
+                className="-mx-1 mr-0.5 cursor-pointer rounded px-1 underline-offset-4 transition hover:bg-accent-soft hover:underline"
                 onMouseEnter={(e) => h?.onEnter(c, e.currentTarget)}
                 onMouseLeave={() => h?.onLeave()}
                 onClick={(e) => h?.onTap(c, e.currentTarget)}
@@ -53,7 +53,7 @@ function SheetLine({ line, h, label }: { line: Line; h?: ChordHandlers; label: (
 
 export function SectionLabel({ s }: { s: Pick<Section, "label" | "type"> }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider" style={{ color: SECTION_COLOR[s.type] }}>
+    <span className="inline-flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.08em]" style={{ color: SECTION_COLOR[s.type] }}>
       <span className="size-1.5 rounded-full" style={{ background: SECTION_COLOR[s.type] }} />
       {s.label}
     </span>
@@ -67,8 +67,8 @@ export function ChordSheet({ sections, fontSize = 17, interactive = true, number
   return (
     <div style={{ fontSize }} className="leading-snug">
       {sections.map((s, i) => (
-        <section key={i} className="mb-6 break-inside-avoid">
-          <div className="mb-1.5">
+        <section key={i} className="mb-8 break-inside-avoid">
+          <div className="mb-2">
             <SectionLabel s={s} />
           </div>
           {s.lines.map((l, k) => (
@@ -95,11 +95,14 @@ function useChordPopover() {
     const esc = (e: KeyboardEvent) => e.key === "Escape" && setState(null);
     const t = setTimeout(() => document.addEventListener("click", close));
     document.addEventListener("keydown", esc);
-    window.addEventListener("scroll", () => setState(null), { once: true });
+    // the main panel scrolls, not the window: listen in the capture phase to catch any scroller
+    const off = () => setState(null);
+    document.addEventListener("scroll", off, { capture: true, once: true });
     return () => {
       clearTimeout(t);
       document.removeEventListener("click", close);
       document.removeEventListener("keydown", esc);
+      document.removeEventListener("scroll", off, { capture: true });
     };
   }, [state?.pinned]);
 
@@ -146,13 +149,13 @@ function ChordPopover({ chord, rect, onEnter, onLeave, onClose }: { chord: strin
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
       style={{ position: "fixed", left, width: W, ...style, fontSize: 14 }}
-      className="glass z-50 rounded-3xl border border-line p-4 shadow-2xl shadow-black/15"
+      className="z-50 rounded-lg bg-[#282828] p-4 shadow-2xl shadow-black/60"
     >
       <div className="mb-2 flex items-center gap-2">
         <span className="text-xl font-bold text-accent">{chord}</span>
-        <div className="ml-auto flex h-9 rounded-full bg-surface-2 p-1 text-xs">
+        <div className="ml-auto flex h-9 rounded-full bg-black/40 p-1 text-xs font-bold">
           {(["guitar", "piano"] as const).map((i) => (
-            <button key={i} onClick={() => setCtx({ ...ctx, instrument: i })} className={`rounded-full px-3 ${ctx.instrument === i ? "bg-bg font-semibold shadow-sm" : "text-muted"}`}>
+            <button key={i} onClick={() => setCtx({ ...ctx, instrument: i })} className={`rounded-full px-3 ${ctx.instrument === i ? "bg-ink text-app" : "text-muted hover:text-ink"}`}>
               {i === "guitar" ? "Gitar" : "Piano"}
             </button>
           ))}
@@ -163,12 +166,12 @@ function ChordPopover({ chord, rect, onEnter, onLeave, onClose }: { chord: strin
       {ctx.instrument === "guitar" ? (
         v ? (
           <div className="flex items-center gap-2">
-            <button className="btn-icon border border-line" disabled={idx === 0} onClick={() => setIdx(idx - 1)} aria-label="Voicing sebelumnya">‹</button>
+            <button className="btn-icon bg-black/30" disabled={idx === 0} onClick={() => setIdx(idx - 1)} aria-label="Voicing sebelumnya">‹</button>
             <div className="flex flex-1 flex-col items-center">
               <GuitarDiagram v={v} />
               <span className="text-xs text-muted">{v.tag ?? `Posisi ${Math.min(idx, s.guitar.length - 1) + 1}`} · {Math.min(idx, s.guitar.length - 1) + 1}/{s.guitar.length}</span>
             </div>
-            <button className="btn-icon border border-line" disabled={idx >= s.guitar.length - 1} onClick={() => setIdx(idx + 1)} aria-label="Voicing berikutnya">›</button>
+            <button className="btn-icon bg-black/30" disabled={idx >= s.guitar.length - 1} onClick={() => setIdx(idx + 1)} aria-label="Voicing berikutnya">›</button>
           </div>
         ) : (
           <p className="py-6 text-center text-sm text-muted">Diagram untuk {chord} belum tersedia.</p>
@@ -184,21 +187,21 @@ function ChordPopover({ chord, rect, onEnter, onLeave, onClose }: { chord: strin
         <p className="py-6 text-center text-sm text-muted">Chord {chord} tidak dikenali.</p>
       )}
 
-      <p className="mt-3 rounded-2xl bg-accent-soft px-3 py-2.5 text-[13px] leading-relaxed">💡 {s.tip}</p>
+      <p className="mt-3 rounded-md bg-black/30 px-3 py-2.5 text-[13px] leading-relaxed text-muted">{s.tip}</p>
       <BandContextPicker ctx={ctx} onChange={setCtx} compact />
     </div>
   );
 }
 
 export function BandContextPicker({ ctx, onChange, compact }: { ctx: BandContext; onChange: (c: BandContext) => void; compact?: boolean }) {
-  const chip = (on: boolean) => `h-11 rounded-full border px-3.5 text-sm transition sm:h-10 ${on ? "border-brand bg-accent-soft font-medium" : "border-line text-muted hover:text-ink"}`;
+  const chip = (on: boolean) => `h-9 rounded-full px-3.5 text-sm font-semibold transition ${on ? "bg-ink text-app" : "bg-surface-2 text-ink hover:bg-[#333]"}`;
   return (
     <div className={`flex flex-wrap items-center gap-1.5 ${compact ? "mt-2" : ""}`}>
       {!compact && (
-        <div className="mr-1 flex h-11 rounded-full bg-surface-2 p-1 text-sm sm:h-10">
+        <div className="mr-1 flex h-9 rounded-full bg-surface-2 p-1 text-sm font-semibold">
           {(["guitar", "piano"] as const).map((i) => (
-            <button key={i} onClick={() => onChange({ ...ctx, instrument: i })} className={`rounded-full px-3.5 ${ctx.instrument === i ? "bg-bg font-semibold shadow-sm" : "text-muted"}`}>
-              {i === "guitar" ? "🎸 Gitar" : "🎹 Piano"}
+            <button key={i} onClick={() => onChange({ ...ctx, instrument: i })} className={`rounded-full px-3.5 ${ctx.instrument === i ? "bg-ink text-app" : "text-muted hover:text-ink"}`}>
+              {i === "guitar" ? "Gitar" : "Piano"}
             </button>
           ))}
         </div>

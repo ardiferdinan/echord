@@ -1,69 +1,51 @@
 @import "tailwindcss";
 
 /*
- * Palette (only these, everything else is a transparent mix of them):
- *   light: main #2C99D6 · secondary #F8FAFC · filler #EB2F33
- *   dark:  main #080F1B · secondary #329DD2 · filler #FF4C2B
- * Text "ink" reuses the other mode's anchor (#080F1B on light, #F8FAFC on dark).
+ * Dark only, Spotify-style (DESIGN.md). Panels float on black; one green accent.
+ * Older token names (brand, hot, dark, surface-2…) are kept and mapped so every component speaks the same palette.
  */
 :root {
-  --main: #2c99d6;
-  --secondary: #f8fafc;
-  --filler: #eb2f33;
-  --ink: #080f1b;
+  color-scheme: dark;
+  --app: #000000;
+  --panel: #121212;
+  --card: #181818;
+  --card-hover: #282828;
+  --surface-3: #2a2a2a;
+  --ink: #ffffff;
+  --muted: #b3b3b3;
+  --line: rgb(255 255 255 / 0.1);
+  --green: #1ed760;
+  --on-green: #000000;
+  --danger: #f3727f;
 
-  --bg: var(--secondary);
-  --brand: var(--main); /* slabs, primary buttons, tiles */
-  --on-brand: #f8fafc;
-  --hot: var(--filler);
-  --on-hot: #f8fafc;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --main: #080f1b;
-    --secondary: #329dd2;
-    --filler: #ff4c2b;
-    --ink: #f8fafc;
-    --bg: var(--main);
-    --brand: var(--secondary);
-  }
-}
-:root[data-theme="dark"] {
-  --main: #080f1b;
-  --secondary: #329dd2;
-  --filler: #ff4c2b;
-  --ink: #f8fafc;
-  --bg: var(--main);
-  --brand: var(--secondary);
-}
-/* derived, via transparency */
-:root {
-  --surface: color-mix(in srgb, var(--brand) 7%, var(--bg));
-  --surface-2: color-mix(in srgb, var(--brand) 13%, var(--bg));
-  --line: color-mix(in srgb, var(--ink) 12%, transparent);
-  --muted: color-mix(in srgb, var(--ink) 62%, transparent);
-  --accent: color-mix(in srgb, var(--brand) 78%, var(--ink)); /* chord text: brand, deepened for legibility */
-  --accent-soft: color-mix(in srgb, var(--brand) 15%, transparent);
-  --hot-soft: color-mix(in srgb, var(--hot) 14%, transparent);
-  --glass: color-mix(in srgb, var(--bg) 86%, transparent);
-  --dark: var(--hot); /* call-to-action tiles use the filler color */
-  --on-dark: var(--on-hot);
+  --bg: var(--panel);
+  --surface: var(--card);
+  --surface-2: var(--surface-3);
+  --brand: var(--green);
+  --on-brand: var(--on-green);
+  --accent: var(--green);
+  --accent-soft: rgb(30 215 96 / 0.14);
+  --hot: var(--danger);
+  --on-hot: #000000;
+  --hot-soft: rgb(243 114 127 / 0.14);
+  --dark: var(--ink);
+  --on-dark: var(--app);
+  --glass: rgb(18 18 18 / 0.92);
+
   --verse: var(--muted);
-  --chorus: var(--hot);
-  --bridge: color-mix(in srgb, var(--brand) 55%, var(--hot));
-  --prechorus: var(--brand);
-  --part: color-mix(in srgb, var(--hot) 60%, var(--ink));
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --accent: color-mix(in srgb, var(--brand) 82%, var(--ink));
-  }
-}
-:root[data-theme="dark"] {
-  --accent: color-mix(in srgb, var(--brand) 82%, var(--ink));
+  --chorus: var(--green);
+  --prechorus: #ffffff;
+  --bridge: #ffffff;
+  --part: var(--muted);
+
+  --ease: cubic-bezier(0.3, 0, 0, 1);
 }
 
 @theme inline {
+  --color-app: var(--app);
+  --color-panel: var(--panel);
+  --color-card: var(--card);
+  --color-card-hover: var(--card-hover);
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
@@ -81,65 +63,104 @@
   --color-on-hot: var(--on-hot);
   --color-glass: var(--glass);
   --font-sans: var(--font-satoshi), system-ui, sans-serif;
-  --font-display: var(--font-creato), var(--font-satoshi), system-ui, sans-serif;
+  --font-display: var(--font-satoshi), system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+html { background: var(--app); }
 body {
-  background: var(--bg);
+  background: var(--app);
   color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
+::selection { background: var(--green); color: var(--on-green); }
 
-/* Sizing: 44px touch targets on mobile, 40px on desktop; 16px input text (no iOS zoom) */
+/* thin dark scrollbars inside panels */
+* { scrollbar-width: thin; scrollbar-color: rgb(255 255 255 / 0.25) transparent; }
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* 44px touch targets on phones, 40px on desktop; 16px input text (no iOS zoom) */
 @utility btn {
-  @apply inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-line bg-surface px-5 text-[15px] font-medium transition hover:bg-surface-2 active:scale-[.97] disabled:opacity-40 sm:h-10 sm:px-4 sm:text-sm;
+  @apply inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-white/30 px-5 text-[15px] font-bold text-ink transition hover:scale-[1.04] hover:border-white active:scale-[.96] disabled:opacity-40 disabled:hover:scale-100 sm:h-10 sm:px-4 sm:text-sm;
 }
 @utility btn-primary {
-  @apply border-transparent bg-brand font-bold text-on-brand hover:bg-brand hover:brightness-110;
+  @apply border-transparent bg-brand text-on-brand hover:border-transparent hover:brightness-110;
 }
 @utility btn-dark {
-  @apply border-transparent bg-hot font-bold text-on-hot hover:bg-hot hover:brightness-110;
+  @apply border-transparent bg-ink text-app hover:border-transparent;
 }
 @utility btn-icon {
-  @apply grid size-11 shrink-0 place-items-center rounded-full transition hover:bg-surface-2 disabled:opacity-30 sm:size-10;
+  @apply grid size-11 shrink-0 place-items-center rounded-full text-muted transition hover:scale-[1.06] hover:text-ink active:scale-95 disabled:opacity-30 disabled:hover:scale-100 sm:size-10;
 }
 @utility input {
-  @apply h-12 w-full rounded-2xl border border-line bg-surface px-4 text-base outline-none placeholder:text-muted focus:border-brand sm:h-11 sm:text-[15px];
+  @apply h-12 w-full rounded-md border border-transparent bg-surface-2 px-4 text-base text-ink outline-none placeholder:text-muted hover:border-white/20 focus:border-white sm:h-11 sm:text-[15px];
 }
 @utility card {
-  @apply rounded-3xl border border-line bg-surface;
+  @apply rounded-lg bg-surface;
 }
 @utility glass {
   background: var(--glass);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
-  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
 }
-@utility display {
-  font-family: var(--font-display);
+@utility chip {
+  @apply inline-flex h-9 items-center rounded-full bg-surface-2 px-3.5 text-sm font-semibold text-ink transition hover:bg-[#333] aria-[current=page]:bg-ink aria-[current=page]:text-app aria-pressed:bg-ink aria-pressed:text-app;
+}
+/* Page titles: heavy and tight */
+@utility headline {
   font-weight: 900;
-  letter-spacing: -0.01em;
-  line-height: 0.92;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+  text-wrap: balance;
+}
+/* kept for older markup: chord/key glyphs, now Satoshi bold */
+@utility display {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
 }
 
-/* Dotted texture from the reference; color via currentColor */
-@utility dots {
-  background-image: radial-gradient(currentColor 2.5px, transparent 3px);
-  background-size: 22px 22px;
+/* Card: lifts on hover and its play button rises into place */
+.play-host .play-pop { opacity: 0; translate: 0 8px; transition: opacity 0.3s var(--ease), translate 0.3s var(--ease); }
+@media (hover: hover) {
+  .play-host:hover .play-pop, .play-host:focus-within .play-pop { opacity: 1; translate: 0 0; }
+}
+@media (hover: none) { .play-host .play-pop { opacity: 1; translate: 0 0; } }
+.play-pop[data-active="true"] { opacity: 1; translate: 0 0; }
+
+/* Track row: the number turns into a play button on hover */
+.track-row .track-num { display: block; }
+.track-row .track-play { display: none; }
+@media (hover: hover) {
+  .track-row:hover .track-num, .track-row:focus-within .track-num { display: none; }
+  .track-row:hover .track-play, .track-row:focus-within .track-play { display: grid; }
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
-.float { animation: float 7s ease-in-out infinite; }
-.float-slow { animation: float 9s ease-in-out -3s infinite; }
+/* Page changes (React <ViewTransition>): content fades and rises; covers morph */
+::view-transition-group(.morph) { animation-duration: 0.4s; animation-timing-function: var(--ease); }
+::view-transition-new(.page) { animation: page-in 0.35s var(--ease) both; }
+::view-transition-old(.page) { animation: page-out 0.15s ease-in both; }
+@keyframes page-in { from { opacity: 0; translate: 0 8px; } }
+@keyframes page-out { to { opacity: 0; } }
+
 @media (prefers-reduced-motion: reduce) {
-  .float, .float-slow { animation: none; }
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
 
-:focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
-}
+/* Sliders (player scrubber, volume): thin track, white fill, green on hover */
+.range { appearance: none; height: 12px; background: transparent; cursor: pointer; --fill: 0%; --c: var(--ink); }
+.range::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(var(--c) 0 0) left / var(--fill) 100% no-repeat, rgb(255 255 255 / 0.3); }
+.range::-moz-range-track { height: 4px; border-radius: 2px; background: linear-gradient(var(--c) 0 0) left / var(--fill) 100% no-repeat, rgb(255 255 255 / 0.3); }
+.range::-webkit-slider-thumb { appearance: none; margin-top: -4px; width: 12px; height: 12px; border-radius: 50%; background: var(--ink); opacity: 0; transition: opacity 0.15s; }
+.range::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 50%; background: var(--ink); opacity: 0; }
+.range:hover, .range:focus-visible { --c: var(--green); }
+.range:hover::-webkit-slider-thumb, .range:focus-visible::-webkit-slider-thumb { opacity: 1; }
+.range:hover::-moz-range-thumb, .range:focus-visible::-moz-range-thumb { opacity: 1; }
+.range:disabled { cursor: default; opacity: 0.5; }

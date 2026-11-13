@@ -19,6 +19,7 @@ export type Song = {
   apple_url?: string | null;
   deezer_id?: number | null;
   listen_url?: string; // filled at render time (Deezer), not stored
+  has_preview?: boolean; // list queries: a stored iTunes preview or a Deezer track to fetch one from
 };
 
 const db = () => {
@@ -29,27 +30,69 @@ const db = () => {
 // ponytail: ILIKE scan, switch to pg_trgm index when the catalog reaches thousands of songs
 export async function searchSongs(q: string, limit = 30): Promise<Song[]> {
   const t = q.trim();
-  if (!t) return (await db()`select * from songs where status = 'published' order by created_at desc limit ${limit}`) as Song[];
+  if (!t) return (await db()`select *, (preview_url is not null or deezer_id is not null) as has_preview from songs where status = 'published' order by created_at desc limit ${limit}`) as Song[];
   const like = `%${t}%`;
   return (await db()`
-    select * from songs where status = 'published' and (title ilike ${like} or artist ilike ${like})
+    select *, (preview_url is not null or deezer_id is not null) as has_preview from songs where status = 'published' and (title ilike ${like} or artist ilike ${like})
     order by title limit ${limit}`) as Song[];
 }
 
-export type SongCard = Pick<Song, "id" | "slug" | "title" | "artist" | "original_key" | "artwork_url" | "album">;
+export type SongCard = Pick<Song, "id" | "slug" | "title" | "artist" | "original_key" | "artwork_url" | "album" | "has_preview">;
 
-/** Browse page: optional search or first letter, alphabetical, paginated. */
-export async function listSongs({ q = "", letter = "", page = 1, per = 48 }): Promise<{ songs: SongCard[]; total: number }> {
+/** Browse page: optional search, first letter or artist, alphabetical, paginated. */
+export async function listSongs({ q = "", letter = "", artist = "", page = 1, per = 48 }): Promise<{ songs: SongCard[]; total: number }> {
   const t = q.trim(), like = `%${t}%`;
   const rows = (await db()`
-    select id, slug, title, artist, original_key, artwork_url, album, count(*) over()::int as total
+    select id, slug, title, artist, original_key, artwork_url, album, (preview_url is not null or deezer_id is not null) as has_preview, count(*) over()::int as total
     from songs
     where status = 'published'
       and (${!t} or title ilike ${like} or artist ilike ${like})
       and (${!letter} or title ilike ${letter + "%"})
-    order by lower(title)
+      and (${!artist} or artist = ${artist})
+    order by
+      -- search: best match first (exact title, starts with, contains), songs with a cover before those without
+      case when ${!t} then 0 when lower(title) = lower(${t}) then 0 when title ilike ${t + "%"} then 1 when title ilike ${like} then 2 else 3 end,
+      case when ${!!t} and artwork_url is null then 1 else 0 end,
+      lower(title)
     limit ${per} offset ${(Math.max(1, page) - 1) * per}`) as (SongCard & { total: number })[];
   return { songs: rows, total: rows[0]?.total ?? 0 };
+}
+
+/** Shelf of covers: random songs that have artwork (a different mix on every visit). */
+export async function randomSongs(limit = 12): Promise<SongCard[]> {
+  return (await db()`
+    select id, slug, title, artist, original_key, artwork_url, album, (preview_url is not null or deezer_id is not null) as has_preview
+    from songs where status = 'published' and artwork_url is not null order by random() limit ${limit}`) as SongCard[];
+}
+
+export type ArtistCard = { artist: string; songs: number; artwork_url: string | null };
+
+/** Artists with the most songs, each with one of their covers. */
+export async function topArtists(limit = 12): Promise<ArtistCard[]> {
+  return (await db()`
+    select artist, count(*)::int as songs, (array_agg(artwork_url order by id) filter (where artwork_url is not null))[1] as artwork_url
+    from songs where status = 'published' and artist is not null and artist <> '' and artist <> 'Various Artists'
+    group by artist order by count(*) desc limit ${limit}`) as ArtistCard[];
+}
+
+/** A playable preview URL: the stored iTunes one, or a fresh Deezer one (their links expire). */
+export async function getPreview(id: number): Promise<{ url: string; listen_url?: string } | undefined> {
+  const [s] = (await db()`select preview_url, deezer_id from songs where id = ${id}`) as Pick<Song, "preview_url" | "deezer_id">[];
+  if (s?.preview_url) return { url: s.preview_url };
+  if (!s?.deezer_id) return undefined;
+  const d = await deezerPreview(s.deezer_id);
+  return d.preview_url ? { url: d.preview_url, listen_url: d.listen_url } : undefined;
+}
+
+/** Deezer preview links expire, so ask for a fresh one each time (nothing if Deezer is slow). */
+export async function deezerPreview(id: number): Promise<{ preview_url?: string; listen_url?: string }> {
+  try {
+    const res = await fetch(`https://api.deezer.com/track/${id}`, { signal: AbortSignal.timeout(2500) });
+    const t = (await res.json()) as { preview?: string; link?: string };
+    return t.preview ? { preview_url: t.preview, listen_url: t.link } : {};
+  } catch {
+    return {};
+  }
 }
 
 export async function songKeys(): Promise<{ title: string; artist: string | null }[]> {

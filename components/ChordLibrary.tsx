@@ -3,7 +3,6 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { CHORD_ROOTS, COMMON_SUFFIXES, DB_SUFFIXES, chordName, dbGuitar, isSlashSuffix, pianoInversions, suggest, type GuitarVoicing } from "@/lib/voicing";
 import { useBandContext } from "@/lib/storage";
-import { Blob } from "./Blob";
 import { BandContextPicker } from "./ChordSheet";
 import { GuitarDiagram, PianoDiagram } from "./Diagrams";
 
@@ -47,46 +46,38 @@ export function ChordLibrary() {
 
   return (
     <div>
-      <Blob
-        fill="var(--brand)"
-        radius={32}
-        className="mb-8 min-h-[180px] p-6 pr-36 text-on-brand sm:p-8 sm:pr-48"
-        slots={{
-          br: {
-            node: (
-              <div className="grid size-28 place-items-center rounded-3xl bg-dark text-on-dark sm:size-36">
-                <span className={`display max-w-full px-2 italic ${chord.length > 4 ? "text-2xl sm:text-3xl" : chord.length > 2 ? "text-3xl sm:text-4xl" : "text-4xl sm:text-6xl"}`}>{chord}</span>
-              </div>
-            ),
-          },
-        }}
-      >
-        <p className="text-sm font-bold uppercase tracking-widest opacity-80">Kamus chord</p>
-        <h1 className="display mt-1 text-[clamp(32px,6vw,56px)] uppercase">{instrument === "guitar" ? "Gitar" : "Piano"}</h1>
-        <div className="mt-4 inline-flex h-11 rounded-full bg-on-brand/15 p-1 text-sm font-bold">
-          {(["guitar", "piano"] as const).map((i) => (
-            <button
-              key={i}
-              onClick={() => pickInstrument(i)}
-              aria-pressed={instrument === i}
-              className={`rounded-full px-5 transition ${instrument === i ? "bg-bg text-accent shadow-sm" : "hover:bg-on-brand/10"}`}
-            >
-              {i === "guitar" ? "🎸 Gitar" : "🎹 Piano"}
-            </button>
-          ))}
+      <header className="-mx-4 -mt-16 flex flex-col gap-5 bg-gradient-to-b from-[#1e5a38] to-panel px-4 pb-6 pt-24 sm:-mx-6 sm:flex-row sm:items-end sm:gap-6 sm:px-6">
+        <span className="grid size-36 shrink-0 place-items-center rounded-md bg-gradient-to-br from-[#1ed760] to-[#0e6b30] font-black tracking-[-0.03em] text-black shadow-2xl shadow-black/50 sm:size-[200px]">
+          <span className={chord.length > 4 ? "text-3xl sm:text-4xl" : chord.length > 2 ? "text-4xl sm:text-5xl" : "text-6xl sm:text-7xl"}>{chord}</span>
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">Kamus chord</p>
+          <h1 className="headline mt-2 text-[clamp(36px,6vw,88px)]">Kamus chord {instrument === "guitar" ? "gitar" : "piano"}</h1>
+          <div className="mt-5 inline-flex h-10 rounded-full bg-black/30 p-1 text-sm font-bold">
+            {(["guitar", "piano"] as const).map((i) => (
+              <button
+                key={i}
+                onClick={() => pickInstrument(i)}
+                aria-pressed={instrument === i}
+                className={`rounded-full px-5 transition ${instrument === i ? "bg-ink text-app" : "text-muted hover:text-ink"}`}
+              >
+                {i === "guitar" ? "Gitar" : "Piano"}
+              </button>
+            ))}
+          </div>
         </div>
-      </Blob>
+      </header>
 
       {/* chord picker */}
-      <div className="mb-8 space-y-3">
+      <div className="mb-8 mt-6 space-y-3">
         <div className="flex flex-wrap gap-2" role="group" aria-label="Nada dasar">
           {CHORD_ROOTS.map((r) => (
             <button
               key={r}
               onClick={() => pick({ root: r })}
               aria-pressed={root === r}
-              className={`grid h-11 min-w-11 place-items-center rounded-2xl px-3 font-display text-lg font-bold italic transition sm:h-12 sm:min-w-12 ${
-                root === r ? "bg-brand text-on-brand" : "bg-surface-2 hover:bg-accent-soft"
+              className={`grid h-11 min-w-11 place-items-center rounded-full px-3 text-base font-bold transition ${
+                root === r ? "bg-brand text-on-brand" : "bg-surface-2 hover:bg-[#333]"
               }`}
             >
               {r}
@@ -107,17 +98,17 @@ export function ChordLibrary() {
       </div>
 
       {/* band-aware suggestion */}
-      <section className="mb-10 rounded-3xl bg-surface-2 p-5 sm:p-6">
+      <section className="mb-10 rounded-lg bg-card p-5 sm:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-display text-xl font-black uppercase">Saran untuk bandmu</h2>
+          <h2 className="text-2xl font-bold tracking-[-0.02em]">Saran untuk bandmu</h2>
           <BandContextPicker ctx={{ ...ctx, instrument }} onChange={setCtx} compact />
         </div>
-        <p className="mb-5 rounded-2xl bg-accent-soft px-4 py-3 text-[15px] leading-relaxed">💡 {s.tip}</p>
+        <p className="mb-5 max-w-3xl text-[15px] leading-relaxed text-muted">{s.tip}</p>
         {instrument === "guitar" ? (
           <VoicingGrid voicings={s.guitar.slice(0, 6)} highlight />
         ) : (
           s.piano?.right.length ? (
-            <div className="max-w-md rounded-3xl bg-bg p-5">
+            <div className="max-w-md rounded-md bg-black/30 p-5">
               <PianoDiagram left={s.piano.left} right={s.piano.right} />
               <Hands left={s.piano.left} right={s.piano.right} />
             </div>
@@ -129,9 +120,8 @@ export function ChordLibrary() {
 
       {/* everything */}
       <section>
-        <h2 className="mb-4 font-display text-xl font-black uppercase">
+        <h2 className="mb-4 text-2xl font-bold tracking-[-0.02em]">
           {instrument === "guitar" ? `Semua posisi ${chord} (${all.length})` : `Inversi ${chord}`}
-          {instrument === "guitar" && <span className="ml-2 align-middle text-xs font-medium normal-case text-muted">chords-db + bentuk geser</span>}
         </h2>
         {instrument === "guitar" ? (
           <VoicingGrid voicings={all} />
@@ -139,8 +129,8 @@ export function ChordLibrary() {
           <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {!inversions.length && <li className="text-muted">Voicing piano untuk {chord} belum tersedia.</li>}
             {inversions.map((v) => (
-              <li key={v.label} className="rounded-3xl bg-surface-2 p-5">
-                <p className="mb-3 font-display font-bold">{v.label}</p>
+              <li key={v.label} className="rounded-lg bg-card p-5">
+                <p className="mb-3 font-bold">{v.label}</p>
                 <PianoDiagram left={v.left} right={v.right} />
                 <Hands left={v.left} right={v.right} />
               </li>
@@ -157,11 +147,11 @@ function VoicingGrid({ voicings, highlight }: { voicings: GuitarVoicing[]; highl
   return (
     <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
       {voicings.map((v, i) => (
-        <li key={v.frets.join() + v.baseFret + i} className={`flex flex-col items-center rounded-3xl p-4 ${highlight ? "bg-bg" : "bg-surface-2"}`}>
+        <li key={v.frets.join() + v.baseFret + i} className={`flex flex-col items-center rounded-lg p-4 transition ${highlight ? "bg-black/30" : "bg-card hover:bg-card-hover"}`}>
           <GuitarDiagram v={v} size={1.1} notes />
           <p className="mt-1 text-center text-sm font-medium">
             {v.tag ?? (v.baseFret > 1 ? `Fret ${v.baseFret}` : "Posisi terbuka")}
-            {v.capo && <span className="ml-1.5 rounded-full bg-ink/10 px-1.5 py-0.5 text-[11px] font-bold uppercase">barre</span>}
+            {v.capo && <span className="ml-1.5 rounded-full bg-white/10 px-1.5 py-0.5 text-[11px] font-bold uppercase">barre</span>}
           </p>
         </li>
       ))}
@@ -186,7 +176,7 @@ function SuffixChips({ suffixes, value, onPick, prefix = "" }: { suffixes: strin
           key={s}
           onClick={() => onPick(s)}
           aria-pressed={value === s}
-          className={`h-10 rounded-full border px-4 text-sm font-medium transition ${value === s ? "border-hot bg-hot text-on-hot" : "border-line hover:bg-surface-2"}`}
+          className={`h-9 rounded-full px-4 text-sm font-semibold transition ${value === s ? "bg-ink text-app" : "bg-surface-2 hover:bg-[#333]"}`}
         >
           {prefix ? chordName(prefix, s) : label(s)}
         </button>

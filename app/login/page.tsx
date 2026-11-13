@@ -5,10 +5,10 @@ export const metadata = { title: "Masuk" };
 
 export default function Page({ searchParams }: PageProps<"/login">) {
   return (
-    <div className="grid min-h-svh place-items-center bg-brand p-4">
+    <main id="content" className="grid min-h-svh place-items-center bg-gradient-to-b from-[#1e3a2a] to-app p-4">
       <Suspense>
         <LoginForm next={searchParams.then((p) => (typeof p.next === "string" ? p.next : "/"))} />
       </Suspense>
-    </div>
+    </main>
   );
 }

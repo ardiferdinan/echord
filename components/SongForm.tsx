@@ -72,9 +72,9 @@ export function SongForm() {
         if (e.dataTransfer.files.length) onFiles(e.dataTransfer.files);
       }}
     >
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3 pt-4">
         <div>
-          <h1 className="display text-4xl sm:text-5xl">Tambah lagu</h1>
+          <h1 className="text-3xl font-black tracking-[-0.03em] sm:text-4xl">Tambah lagu</h1>
           <p className="mt-1 text-sm text-muted">
             Paste teks chord dari mana saja, atau cari lirik lalu klik suku kata untuk menaruh chord.
           </p>
@@ -101,7 +101,7 @@ export function SongForm() {
           <div className="mb-2 flex items-center gap-2">
             <div className="flex h-11 rounded-full bg-surface-2 p-1 text-sm sm:h-10">
               {(["paste", "click"] as const).map((m) => (
-                <button key={m} onClick={() => setMode(m)} className={`rounded-full px-4 ${mode === m ? "bg-bg font-semibold shadow-sm" : "text-muted"}`}>
+                <button key={m} onClick={() => setMode(m)} className={`rounded-full px-4 font-semibold ${mode === m ? "bg-ink text-app" : "text-muted hover:text-ink"}`}>
                   {m === "paste" ? "Teks" : "Klik chord"}
                 </button>
               ))}
@@ -121,7 +121,7 @@ export function SongForm() {
               aria-label="Teks lagu"
             />
           ) : (
-            <div className="min-h-[28rem] rounded-3xl border border-line bg-surface p-5">
+            <div className="min-h-[28rem] rounded-lg bg-card p-5">
               {sections.length ? (
                 <ClickEditor
                   content={imported.content}
@@ -139,13 +139,13 @@ export function SongForm() {
           )}
         </div>
 
-        <div className="rounded-3xl border border-line bg-surface p-5">
+        <div className="rounded-lg bg-card p-5">
           <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted">Preview</p>
           {sections.length ? <ChordSheet sections={sections} fontSize={15} /> : <p className="text-sm text-muted">Preview muncul di sini.</p>}
         </div>
       </div>
 
-      <div className="sticky bottom-0 -mx-4 mt-4 flex flex-wrap items-center gap-3 border-t border-line bg-bg/90 px-4 py-3 backdrop-blur">
+      <div className="sticky bottom-0 -mx-4 mt-4 flex flex-wrap items-center gap-3 border-t border-line bg-panel/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
         <button className="btn btn-primary px-5 py-2" onClick={save} disabled={saving || !sections.length}>
           {saving ? "Menyimpan…" : `Simpan${queue.length ? ` & berikutnya (${queue.length} lagi)` : ""}`}
         </button>
@@ -186,7 +186,7 @@ function LyricsSearch({ onPick }: { onPick: (l: Lyric) => void }) {
   };
 
   return (
-    <div className="mb-4 card p-3">
+    <div className="mb-4 rounded-lg bg-card p-3">
       <form
         className="flex gap-2"
         onSubmit={(e) => {

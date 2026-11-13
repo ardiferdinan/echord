@@ -1,18 +1,18 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { listSongs } from "@/lib/db";
-import { Blob } from "@/components/Blob";
+import { Cover, TrackList, artistHref } from "@/components/library";
+import { PlayButton } from "@/components/player/PlayButton";
 
-export const metadata = { title: "Semua lagu" };
+export const metadata = { title: "Cari lagu" };
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-const PER = 48;
+const PER = 50;
 
 export default function SongsPage({ searchParams }: PageProps<"/songs">) {
   return (
-    <Suspense fallback={<div className="h-96 animate-pulse rounded-[32px] bg-surface-2" />}>
+    <Suspense fallback={<div className="mt-6 h-96 animate-pulse rounded-lg bg-white/5" />}>
       <Songs searchParams={searchParams} />
     </Suspense>
   );
@@ -33,81 +33,72 @@ async function Songs({ searchParams }: Pick<PageProps<"/songs">, "searchParams">
     if (o.hal && o.hal > 1) s.set("hal", String(o.hal));
     return `/songs${s.size ? `?${s}` : ""}`;
   };
+  const top = q && page === 1 ? songs[0] : undefined;
 
   return (
-    <div>
-      <Blob
-        fill="var(--brand)"
-        radius={32}
-        className="mb-6 min-h-[160px] p-6 pr-36 text-on-brand sm:p-8 sm:pr-48"
-        slots={{
-          br: {
-            node: (
-              <div className="grid size-28 place-items-center rounded-3xl bg-dark text-on-dark sm:size-36">
-                <span className="text-center">
-                  <span className="display block text-4xl italic tabular-nums sm:text-5xl">{total}</span>
-                  <span className="text-xs font-medium opacity-70">lagu</span>
-                </span>
-              </div>
-            ),
-          },
-        }}
-      >
-        <p className="text-sm font-bold uppercase tracking-widest opacity-80">Perpustakaan</p>
-        <h1 className="display mt-1 text-[clamp(32px,6vw,56px)] uppercase">{q ? `“${q}”` : letter ? `Huruf ${letter}` : "Semua lagu"}</h1>
-        {(q || letter) && (
-          <Link href="/songs" className="mt-4 inline-flex h-10 items-center rounded-full bg-on-brand/15 px-4 text-sm font-bold hover:bg-on-brand/25">
-            ✕ Reset filter
-          </Link>
-        )}
-      </Blob>
-
-      <nav className="mb-6 flex flex-wrap gap-1.5" aria-label="Filter huruf awal">
-        {LETTERS.map((l) => (
-          <Link
-            key={l}
-            href={href({ huruf: l === letter ? undefined : l })}
-            aria-current={l === letter ? "page" : undefined}
-            className={`grid size-10 place-items-center rounded-xl lg:size-9 font-display font-bold italic transition ${l === letter ? "bg-brand text-on-brand" : "bg-surface-2 hover:bg-accent-soft"}`}
-          >
-            {l}
-          </Link>
-        ))}
-      </nav>
-
-      {songs.length ? (
-        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-          {songs.map((s) => (
-            <li key={s.id}>
-              <Link href={`/songs/${s.slug}`} className="group flex items-center gap-3 rounded-3xl bg-surface-2 p-2.5 transition hover:bg-accent-soft">
-                {s.artwork_url ? (
-                  <Image src={s.artwork_url} alt="" width={56} height={56} className="size-14 shrink-0 rounded-2xl" />
-                ) : (
-                  <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-bg text-accent">
-                    <span className="display text-xl italic">{s.original_key || "♪"}</span>
-                  </span>
-                )}
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-display text-[17px] font-extrabold">{s.title}</span>
-                  <span className="block truncate text-sm text-muted">{s.artist || "—"}</span>
-                </span>
-                {s.artwork_url && s.original_key && (
-                  <span className="shrink-0 rounded-full bg-bg px-2.5 py-1 font-display text-sm font-bold italic text-accent">{s.original_key}</span>
-                )}
-                <span className="pr-1 text-lg text-muted transition group-hover:translate-x-1" aria-hidden>→</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+    <div className="pt-2">
+      {q ? (
+        <h1 className="sr-only">Hasil pencarian “{q}”</h1>
       ) : (
-        <p className="rounded-3xl bg-surface-2 p-6 text-muted">Tidak ada lagu yang cocok.</p>
+        <div className="flex flex-wrap items-end justify-between gap-2 pt-4">
+          <h1 className="text-3xl font-black tracking-[-0.03em] sm:text-4xl">{letter ? `Lagu berawalan ${letter}` : "Semua lagu"}</h1>
+          <p className="text-sm text-muted">{total.toLocaleString("id-ID")} lagu</p>
+        </div>
       )}
+
+      {!q && (
+        <nav className="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0" aria-label="Filter huruf awal">
+          <Link href="/songs" aria-current={!letter ? "page" : undefined} className="chip shrink-0">Semua</Link>
+          {LETTERS.map((l) => (
+            <Link key={l} href={href({ huruf: l === letter ? undefined : l })} aria-current={l === letter ? "page" : undefined} className="chip w-9 shrink-0 justify-center px-0">
+              {l}
+            </Link>
+          ))}
+        </nav>
+      )}
+
+      {top && (
+        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          <section aria-label="Hasil teratas">
+            <h2 className="mb-3 text-2xl font-bold tracking-[-0.02em]">Hasil teratas</h2>
+            <div className="play-host relative rounded-lg bg-card p-5 transition hover:bg-card-hover">
+              <Cover s={top} className="size-24 rounded-md text-3xl shadow-lg shadow-black/50" sizes="96px" />
+              <Link href={`/songs/${top.slug}`} className="mt-5 block truncate text-3xl font-black tracking-[-0.03em] after:absolute after:inset-0 after:rounded-lg">{top.title}</Link>
+              <p className="mt-2 text-sm text-muted">
+                <span className="rounded-full bg-black/40 px-2.5 py-1 text-xs font-bold text-ink">Lagu</span>
+                {top.artist && <Link href={artistHref(top.artist)} className="relative z-10 ml-2 font-semibold text-ink hover:underline">{top.artist}</Link>}
+              </p>
+              {top.has_preview && <PlayButton track={{ ...top }} className="play-pop absolute bottom-5 right-5 z-10" />}
+            </div>
+          </section>
+          <section aria-label="Lagu" className="min-w-0">
+            <h2 className="mb-3 text-2xl font-bold tracking-[-0.02em]">Lagu</h2>
+            <TrackList songs={songs.slice(1, 5)} start={1} />
+          </section>
+        </div>
+      )}
+
+      <div className="mt-6">
+        {songs.length ? (
+          (!q || songs.length > 5 || page > 1) && (
+            <>
+              {q && page === 1 && <h2 className="mb-3 text-2xl font-bold tracking-[-0.02em]">Semua hasil untuk “{q}”</h2>}
+              <TrackList songs={q && page === 1 ? songs.slice(5) : songs} start={q && page === 1 ? 5 : (page - 1) * PER} />
+            </>
+          )
+        ) : (
+          <div className="py-16 text-center">
+            <p className="text-2xl font-bold">Tidak ada hasil untuk “{q || letter}”</p>
+            <p className="mt-2 text-muted">Coba ejaan lain, atau cari nama penyanyinya.</p>
+          </div>
+        )}
+      </div>
 
       {pages > 1 && (
         <nav className="mt-8 flex items-center justify-center gap-3" aria-label="Halaman">
-          {page > 1 ? <Link href={href({ huruf: letter, hal: page - 1 })} className="btn">← Sebelumnya</Link> : <span className="btn opacity-40">← Sebelumnya</span>}
+          {page > 1 && <Link href={href({ huruf: letter, hal: page - 1 })} className="btn">Sebelumnya</Link>}
           <span className="text-sm tabular-nums text-muted">{page} / {pages}</span>
-          {page < pages ? <Link href={href({ huruf: letter, hal: page + 1 })} className="btn">Berikutnya →</Link> : <span className="btn opacity-40">Berikutnya →</span>}
+          {page < pages && <Link href={href({ huruf: letter, hal: page + 1 })} className="btn">Berikutnya</Link>}
         </nav>
       )}
     </div>

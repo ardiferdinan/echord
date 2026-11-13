@@ -5,7 +5,6 @@ import { detectKey, transposeKey } from "@/lib/chordpro";
 import { useLocal, useSetlists, type Setlist } from "@/lib/storage";
 import { ChordSheet } from "@/components/ChordSheet";
 import { arranged } from "@/components/SetlistEditor";
-import { Blob } from "@/components/Blob";
 
 /** Stage for a setlist saved in this browser. */
 export function LocalStage({ id }: { id: string }) {
@@ -18,7 +17,6 @@ export function Stage({ setlist, backHref }: { setlist: Setlist; backHref: strin
   const [i, setI] = useState(0);
   const [font, setFont] = useLocal("echord:stage-font", 24);
   const [numbers, setNumbers] = useLocal("echord:numbers", false); // same choice as the song page
-  const [theme, setTheme] = useLocal<"dark" | "light">("echord:stage-theme", "dark");
   const [speed, setSpeed] = useLocal("echord:scroll-speed", 20); // px per second
   const [scrolling, setScrolling] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -33,16 +31,6 @@ export function Stage({ setlist, backHref }: { setlist: Setlist; backHref: strin
     box.current?.scrollTo({ top: 0 });
   };
 
-  // stage is dark by default (dim stage, less glare); restore page theme on exit
-  useEffect(() => {
-    const el = document.documentElement;
-    const prev = el.dataset.theme;
-    el.dataset.theme = theme;
-    return () => {
-      if (prev) el.dataset.theme = prev;
-      else delete el.dataset.theme;
-    };
-  }, [theme]);
 
   // auto-scroll
   useEffect(() => {
@@ -95,26 +83,25 @@ export function Stage({ setlist, backHref }: { setlist: Setlist; backHref: strin
   const key = item?.originalKey ? transposeKey(item.originalKey, item.transpose) : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-bg text-ink">
+    <div className="fixed inset-0 z-50 flex flex-col bg-panel text-ink">
       {/* floating top pill */}
-      <div className="glass mx-3 mt-3 flex items-center gap-1.5 rounded-full border border-line p-1.5 pr-2 text-sm shadow-lg shadow-black/10 sm:mx-6">
-        <Link href={backHref} className="grid size-11 place-items-center rounded-full bg-surface-2 hover:bg-line sm:size-10" aria-label="Keluar stage mode">✕</Link>
-        <span className="display px-2 text-xl italic tabular-nums">
+      <div className="mx-3 mt-3 flex items-center gap-1.5 rounded-full bg-[#1f1f1f] p-1.5 pr-2 text-sm sm:mx-6">
+        <Link href={backHref} className="grid size-11 place-items-center rounded-full bg-black/40 text-muted hover:text-ink sm:size-10" aria-label="Keluar stage mode">✕</Link>
+        <span className="px-2 text-lg font-bold tabular-nums">
           {String(i + 1).padStart(2, "0")}
           <span className="text-muted">/{String(items.length).padStart(2, "0")}</span>
         </span>
         <div className="mr-auto hidden min-w-0 gap-1 sm:flex" aria-hidden>
           {items.map((it, k) => (
-            <button key={it.id} onClick={() => go(k)} tabIndex={-1} title={it.title} className={`h-2 rounded-full transition-all ${k === i ? "w-8 bg-brand" : k < i ? "w-2 bg-muted" : "w-2 bg-line"}`} />
+            <button key={it.id} onClick={() => go(k)} tabIndex={-1} title={it.title} className={`h-2 rounded-full transition-all ${k === i ? "w-8 bg-brand" : k < i ? "w-2 bg-muted" : "w-2 bg-white/20"}`} />
           ))}
         </div>
         <span className="flex-1 sm:hidden" />
-        <button className="btn-icon" onClick={() => setFont(Math.max(14, font - 2))} aria-label="Perkecil teks">A−</button>
-        <button className="btn-icon" onClick={() => setFont(Math.min(48, font + 2))} aria-label="Perbesar teks">A+</button>
-        <button className="grid h-11 shrink-0 place-items-center rounded-full px-3 font-display font-bold italic transition hover:bg-surface-2 sm:h-10" onClick={() => setNumbers(!numbers)} aria-pressed={numbers} title="Nama chord / chord angka">
+        <button className="btn-icon" onClick={() => setFont(Math.max(14, font - 2))} aria-label="A− perkecil teks">A−</button>
+        <button className="btn-icon" onClick={() => setFont(Math.min(48, font + 2))} aria-label="A+ perbesar teks">A+</button>
+        <button className="grid h-11 shrink-0 place-items-center rounded-full px-3 font-bold transition hover:bg-white/10 aria-pressed:bg-ink aria-pressed:text-app sm:h-10" onClick={() => setNumbers(!numbers)} aria-pressed={numbers} title="Nama chord / chord angka">
           {numbers ? "123" : "Abc"}
         </button>
-        <button className="btn-icon hidden sm:grid" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Ganti tema">{theme === "dark" ? "☀" : "☾"}</button>
         <button className="btn-icon hidden sm:grid" onClick={() => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen())} aria-label="Layar penuh">⛶</button>
       </div>
 
@@ -131,48 +118,28 @@ export function Stage({ setlist, backHref }: { setlist: Setlist; backHref: strin
       >
         {item ? (
           <div className="mx-auto max-w-4xl">
-            <Blob
-              fill="var(--brand)"
-              radius={32}
-              className="mb-8 min-h-[150px] p-6 pr-32 text-on-brand sm:min-h-[180px] sm:p-8 sm:pr-40"
-              slots={{
-                br: {
-                  node: (
-                    <div className="grid size-24 place-items-center rounded-3xl bg-dark text-on-dark sm:size-28">
-                      <span className="display text-4xl italic sm:text-5xl">{key ?? "♪"}</span>
-                    </div>
-                  ),
-                },
-              }}
-            >
-              <span className="dots pointer-events-none absolute right-40 top-5 hidden h-16 w-28 opacity-50 sm:block" aria-hidden />
-              <h1 className="display relative text-[clamp(28px,5vw,48px)] uppercase">{item.title}</h1>
-              {item.artist && <p className="relative mt-2 text-sm font-medium opacity-90">{item.artist}</p>}
-              {item.notes && <p className="relative mt-4 inline-block rounded-2xl bg-white/15 px-3 py-2 text-base font-medium">📝 {item.notes}</p>}
-            </Blob>
+            <header className="mb-8 flex items-end gap-5">
+              <span className="grid size-24 shrink-0 place-items-center rounded-md bg-gradient-to-br from-[#2f2f2f] to-[#1a1a1a] text-4xl font-black text-accent shadow-xl shadow-black/50 sm:size-28" aria-label={key ? `Kunci ${key}` : undefined}>
+                {key ?? "♪"}
+              </span>
+              <div className="min-w-0">
+                <h1 className="headline text-[clamp(32px,4.4vw,60px)]">{item.title}</h1>
+                {item.artist && <p className="mt-2 text-sm font-semibold text-muted">{item.artist}</p>}
+              </div>
+            </header>
+            {item.notes && <p className="mb-6 rounded-md bg-[#1f1f1f] px-4 py-3 text-base">{item.notes}</p>}
             <div className="px-2 sm:px-4">
               <ChordSheet sections={arranged(item)} fontSize={font} interactive={false} numberKey={numbers ? key || detectKey(arranged(item)) : undefined} />
             </div>
             {next && (
-              <Blob
-                fill="var(--surface-2)"
-                radius={28}
-                className="group mt-12 w-full max-w-md p-6 pr-28 sm:ml-auto"
-                slots={{
-                  br: {
-                    node: (
-                      <span className="grid size-20 place-items-center rounded-[24px] bg-brand text-3xl text-on-brand transition group-hover:brightness-110" aria-hidden>
-                        →
-                      </span>
-                    ),
-                  },
-                }}
-              >
-                <button onClick={() => go(i + 1)} className="absolute inset-0 z-20 rounded-[28px]" aria-label={`Lagu berikutnya: ${next.title}`} />
-                <span className="text-xs font-bold uppercase tracking-widest text-muted">Berikutnya</span>
-                <span className="mt-1 block truncate font-display text-2xl font-black uppercase">{next.title}</span>
-                {next.originalKey && <span className="text-sm text-muted">Key {transposeKey(next.originalKey, next.transpose)}</span>}
-              </Blob>
+              <button onClick={() => go(i + 1)} className="group mt-12 flex w-full max-w-md items-center gap-4 rounded-lg bg-[#1f1f1f] p-4 text-left transition hover:bg-card-hover sm:ml-auto" aria-label={`Lagu berikutnya: ${next.title}`}>
+                <span className="min-w-0 flex-1">
+                  <span className="text-xs font-bold uppercase tracking-[0.1em] text-muted">Berikutnya</span>
+                  <span className="mt-1 block truncate text-xl font-black tracking-[-0.03em]">{next.title}</span>
+                  {next.originalKey && <span className="text-sm text-muted">Kunci {transposeKey(next.originalKey, next.transpose)}</span>}
+                </span>
+                <span className="grid size-12 shrink-0 place-items-center rounded-full bg-brand text-xl text-on-brand transition group-hover:scale-[1.06]" aria-hidden>→</span>
+              </button>
             )}
           </div>
         ) : (
@@ -182,12 +149,12 @@ export function Stage({ setlist, backHref }: { setlist: Setlist; backHref: strin
 
       {/* floating bottom control pill */}
       <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center px-3">
-        <div className="glass pointer-events-auto flex w-full max-w-xl items-center gap-1.5 rounded-full border border-line p-1.5 text-sm shadow-2xl shadow-black/20">
-          <button className="grid size-12 place-items-center rounded-full text-xl hover:bg-surface-2 disabled:opacity-30" disabled={i === 0} onClick={() => go(i - 1)} aria-label="Lagu sebelumnya">‹</button>
-          <button className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-full font-display font-bold italic transition ${scrolling ? "bg-brand text-on-brand" : "hover:bg-surface-2"}`} onClick={() => setScrolling(!scrolling)}>
+        <div className="pointer-events-auto flex w-full max-w-xl items-center gap-1.5 rounded-full bg-[#282828] p-1.5 text-sm shadow-2xl shadow-black/60">
+          <button className="grid size-12 place-items-center rounded-full text-xl text-muted hover:text-ink disabled:opacity-30" disabled={i === 0} onClick={() => go(i - 1)} aria-label="Lagu sebelumnya">‹</button>
+          <button className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-full font-bold transition ${scrolling ? "bg-ink text-app" : "hover:bg-white/10"}`} onClick={() => setScrolling(!scrolling)}>
             {scrolling ? "❚❚ Auto-scroll" : "▶ Auto-scroll"}
           </button>
-          <input type="range" min={5} max={80} value={speed} onChange={(e) => setSpeed(+e.target.value)} className="w-16 accent-[var(--brand)] sm:w-28" aria-label="Kecepatan auto-scroll" />
+          <input type="range" min={5} max={80} value={speed} onChange={(e) => setSpeed(+e.target.value)} className="range w-16 sm:w-28" style={{ ["--fill" as string]: `${((speed - 5) / 75) * 100}%` }} aria-label="Kecepatan auto-scroll" />
           <button className="grid size-12 place-items-center rounded-full bg-brand text-xl text-on-brand hover:brightness-110 disabled:opacity-30" disabled={i >= items.length - 1} onClick={() => go(i + 1)} aria-label="Lagu berikutnya">›</button>
         </div>
       </div>
