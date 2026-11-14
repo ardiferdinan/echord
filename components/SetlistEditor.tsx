@@ -31,7 +31,14 @@ export function arranged(item: SetlistItem): Section[] {
   const secs = parseSections(item.content);
   const byId = new Map(secs.map((s) => [s.id, s]));
   const key = item.originalKey ? transposeKey(item.originalKey, item.transpose) : undefined;
-  const flow = item.order.flatMap((e) => { const s = byId.get(flowId(e)); return s ? [{ ...s, collapsed: flowCollapsed(e) }] : []; });
+  // the same part several times in a row (Intro 4X) is written once with its count, like in the editor
+  const flow: Section[] = [];
+  for (const e of item.order) {
+    const s = byId.get(flowId(e)), last = flow.at(-1);
+    if (!s) continue;
+    if (last && last.id === s.id && !!last.collapsed === flowCollapsed(e)) last.repeat = (last.repeat ?? 1) + 1;
+    else flow.push({ ...s, collapsed: flowCollapsed(e) });
+  }
   return transposeSections(flow, item.transpose, key);
 }
 

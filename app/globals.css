@@ -180,7 +180,7 @@ body {
 /* fitted sheets (print, stage "show all"): a part may continue in the next column, but a line never splits and a part tag stays with its first line */
 .flow .chord-sheet section > div { break-inside: avoid; }
 .flow .chord-sheet section > div:first-child { break-after: avoid; margin-bottom: 0.4em; }
-.flow .section-tag { font-size: 0.72em; }
+.flow .section-tag, .flow .section-badge { font-size: 0.72em; }
 @page { size: A4; margin: 0; }
 @media print {
   html, body, .print-root, #content { background: #fff !important; min-height: 0 !important; padding: 0 !important; }

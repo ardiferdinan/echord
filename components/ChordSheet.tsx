@@ -118,6 +118,9 @@ export function ChordSheet({ sections, fontSize = 17, interactive = true, number
         <section key={i} className={`break-inside-avoid ${s.collapsed ? "mb-5" : "mb-8"}`}>
           <div className="mb-3 flex items-center gap-[0.6em]">
             <SectionLabel s={s} />
+            {(s.repeat ?? 1) > 1 && (
+              <span className="section-badge grid h-[1.6em] min-w-[1.6em] place-items-center rounded-full bg-[#2b3a8c] px-[0.4em] text-[13px] font-black leading-none text-white" aria-label={`diulang ${s.repeat} kali`}>{s.repeat}X</span>
+            )}
             {s.collapsed && <span className="font-mono font-bold opacity-70" title="Sama seperti sebelumnya">[...]</span>}
           </div>
           {!s.collapsed && s.lines.map((l, k) => (

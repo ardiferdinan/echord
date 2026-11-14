@@ -9,6 +9,7 @@ export type Section = {
   id: string; label: string; type: SectionType; lines: Line[]; collapsed?: boolean;
   heading?: string; // medley: a song title row between songs ("Kumenang · Kunci D"), no lines
   key?: string; // medley: the key of the song this part belongs to (for chord numbers)
+  repeat?: number; // played n times in a row: written once with an "nX" badge
 };
 
 // a setlist flow is a list of section ids; a trailing * marks that occurrence collapsed
