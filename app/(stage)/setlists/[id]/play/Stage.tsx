@@ -151,7 +151,7 @@ export function Stage({ setlist, backHref, printHref, editHref, onTranspose }: {
       <button className="grid h-11 shrink-0 place-items-center rounded-full px-3 font-bold transition hover:bg-white/10 aria-pressed:bg-ink aria-pressed:text-app sm:h-10" onClick={() => setNumbers(!numbers)} aria-pressed={numbers} title="Nama chord / chord angka">
         {numbers ? "123" : "Abc"}
       </button>
-      <SheetColorButton />
+      <SheetColorButton light={light} />
       <button className="grid h-11 shrink-0 place-items-center rounded-full px-3 transition hover:bg-white/10 aria-pressed:bg-ink aria-pressed:text-app sm:h-10" onClick={() => setShapes(!shapes)} aria-pressed={shapes} aria-label="Bentuk chord" title="Bentuk chord">
         <ChordIcon className="size-5" />
       </button>

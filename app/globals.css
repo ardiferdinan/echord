@@ -181,6 +181,7 @@ body {
 .flow .chord-sheet section > div { break-inside: avoid; }
 .flow .chord-sheet section > div:first-child { break-after: avoid; margin-bottom: 0.4em; }
 .flow .section-tag, .flow .section-badge { font-size: 0.72em; }
+.print-page { --tag-ink: #ffffff; } /* white paper: tag text white, like the white stage */
 @page { size: A4; margin: 0; }
 @media print {
   html, body, .print-root, #content { background: #fff !important; min-height: 0 !important; padding: 0 !important; }
@@ -201,11 +202,10 @@ body {
   --ink: #111111; --dark: #111111; --on-dark: #ffffff; --muted: #5c5c5c; --line: rgb(0 0 0 / 0.12);
   --accent: #0e8a3d; --accent-soft: rgb(14 138 61 / 0.12);
   --track: rgb(0 0 0 / 0.18);
+  --tag-ink: #ffffff; /* part tags: text in the page color */
 }
-/* the lyric sample on the Aa button follows the page (the picked lyric color is for dark pages) */
-.stage-light .lyric-sample { color: #111111 !important; }
-/* lyrics dark; the picked chord color, darkened so it reads on white */
-.stage-light .chord-sheet { color: #111111 !important; --sheet-chord: color-mix(in oklab, var(--sheet-chord-pick) 62%, black) !important; }
+/* the colors picked for the white page (Aa while the page is white) */
+.stage-light .chord-sheet { color: var(--sheet-lyric-light) !important; --sheet-chord: var(--sheet-chord-light) !important; }
 .stage-light .btn-icon:hover, .stage-light [class*="hover:bg-white"]:hover { background-color: rgb(0 0 0 / 0.07); }
 /* menus and chord popovers stay dark wherever they open */
 .on-dark {

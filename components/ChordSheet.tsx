@@ -67,8 +67,9 @@ export type TagKey = (typeof TAGS)[number]["key"];
 const MATCH_ORDER: TagKey[] = ["prechorus", "chorus", "bridge", "intro", "interlude", "vamp", "verse"];
 const BY_TYPE: Record<SectionType, TagKey | null> = { verse: "verse", chorus: "chorus", bridge: "bridge", prechorus: "prechorus", part: null };
 
-export type SheetColors = { chord: string; lyric: string; tags: "multi" | "single"; tag: string; tagColors: Partial<Record<TagKey, string>> };
-export const DEFAULT_COLORS: SheetColors = { chord: "#1ed760", lyric: "#ffffff", tags: "multi", tag: "#1ed760", tagColors: {} };
+/** chord/lyric: on a dark page; chordLight/lyricLight: on the stage's white page (each picked on its own). */
+export type SheetColors = { chord: string; lyric: string; chordLight: string; lyricLight: string; tags: "multi" | "single"; tag: string; tagColors: Partial<Record<TagKey, string>> };
+export const DEFAULT_COLORS: SheetColors = { chord: "#1ed760", lyric: "#ffffff", chordLight: "#0e8a3d", lyricLight: "#111111", tags: "multi", tag: "#1ed760", tagColors: {} };
 /** Chord, lyric and part-tag colors, chosen once and used on every chord sheet (older saves lack the tag fields). */
 export function useSheetColors() {
   const [saved, set] = useLocal<Partial<SheetColors>>("echord:sheet-colors", DEFAULT_COLORS);
@@ -82,18 +83,12 @@ export function tagColor(s: Pick<Section, "label" | "type">, c: SheetColors) {
   const k = tagKey(s);
   return k ? (c.tagColors[k] ?? tagDefault(k)) : "#e0e0e0";
 }
-/** Black or white text, whichever reads better on the tag color. */
-export function inkOn(hex: string) {
-  const n = parseInt(hex.slice(1), 16), [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255].map((v) => ((v /= 255) <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.18 ? "#000" : "#fff";
-}
-
-/** Part marker: a solid tag in the part's color (or the one color picked for all). */
+/** Part marker: a solid tag in the part's color (or the one color picked for all); its text takes the page color (black on dark, white on white). */
 export function SectionLabel({ s }: { s: Pick<Section, "label" | "type"> }) {
   const [colors] = useSheetColors();
   const bg = tagColor(s, colors);
   return (
-    <span className="section-tag inline-flex items-center rounded-[5px] px-[0.65em] py-[0.35em] text-[13px] font-extrabold uppercase leading-none tracking-[0.08em]" style={{ background: bg, color: inkOn(bg) }}>
+    <span className="section-tag inline-flex items-center rounded-[5px] px-[0.65em] py-[0.35em] text-[13px] font-extrabold uppercase leading-none tracking-[0.08em]" style={{ background: bg, color: "var(--tag-ink, #000)" }}>
       {s.label}
     </span>
   );
@@ -106,7 +101,7 @@ export function ChordSheet({ sections, fontSize = 17, interactive = true, number
   const label = (c: string) => (numberKey ? toNumber(c, numberKey) : c);
   const [colors] = useSheetColors();
   return (
-    <div style={{ fontSize, color: colors.lyric, ["--sheet-chord" as string]: colors.chord, ["--sheet-chord-pick" as string]: colors.chord }} className="chord-sheet leading-snug">
+    <div style={{ fontSize, color: colors.lyric, ["--sheet-chord" as string]: colors.chord, ["--sheet-chord-light" as string]: colors.chordLight, ["--sheet-lyric-light" as string]: colors.lyricLight }} className="chord-sheet leading-snug">
       {sections.map((s, i) =>
         s.heading ? (
           // medley: the next song's title and key
