@@ -20,6 +20,7 @@ export type Song = {
   apple_url?: string | null;
   deezer_id?: number | null;
   listen_url?: string; // filled at render time (Deezer), not stored
+  version_of?: number | null; // set on an alternative source's chords (status 'version')
   has_preview?: boolean; // list queries: a stored iTunes preview or a Deezer track to fetch one from
 };
 
@@ -122,8 +123,32 @@ export async function deezerPreview(id: number): Promise<{ preview_url?: string;
   }
 }
 
-export async function songKeys(): Promise<{ title: string; artist: string | null }[]> {
-  return (await db()`select title, artist from songs`) as { title: string; artist: string | null }[];
+export type SongKey = { id: number; title: string; artist: string | null; source_url: string | null; version_of: number | null };
+export async function songKeys(): Promise<SongKey[]> {
+  return (await db()`select id, title, artist, source_url, version_of from songs`) as SongKey[];
+}
+
+export type Version = Pick<Song, "id" | "source_url" | "content" | "original_key" | "bpm">;
+/** Other sources' chords for a song (its own come first on the page). */
+export async function songVersions(id: number): Promise<Version[]> {
+  return (await db()`select id, source_url, content, original_key, bpm from songs where version_of = ${id} and status = 'version' order by id`) as Version[];
+}
+
+/**
+ * Make another source the one a song shows: swap the chords (content, key, bpm, source) between the song
+ * and its version, so the song keeps its page, cover, preview and genre.
+ */
+export async function swapVersion(songId: number, versionId: number) {
+  const sql = db();
+  const rows = (await sql`select id, source_url, content, original_key, bpm from songs where (id = ${songId} and version_of is null) or (id = ${versionId} and version_of = ${songId})`) as Version[];
+  const a = rows.find((r) => r.id === songId), b = rows.find((r) => r.id === versionId);
+  if (!a || !b) throw new Error("Versi tidak ditemukan");
+  // source_url is unique: clear it on the version first, then swap in one transaction
+  await sql.transaction([
+    sql`update songs set source_url = null where id = ${b.id}`,
+    sql`update songs set content = ${b.content}, original_key = ${b.original_key}, bpm = ${b.bpm}, source_url = ${b.source_url} where id = ${a.id}`,
+    sql`update songs set content = ${a.content}, original_key = ${a.original_key}, bpm = ${a.bpm}, source_url = ${a.source_url} where id = ${b.id}`,
+  ]);
 }
 
 export async function importedUrls(): Promise<Set<string>> {
@@ -142,11 +167,11 @@ type NewSong = Omit<Song, "id" | "slug" | "category"> & { category?: string };
 export async function insertSong(s: NewSong) {
   const base = slugify(`${s.title} ${s.artist ?? ""}`) || "lagu";
   const rows = (await db()`
-    insert into songs (slug, title, artist, category, original_key, bpm, content, status, submitted_by, source_url, genre)
+    insert into songs (slug, title, artist, category, original_key, bpm, content, status, submitted_by, source_url, genre, version_of)
     values (
       ${base} || coalesce((select '-' || (count(*) + 1) from songs where slug = ${base} or slug like ${base + "-%"} having count(*) > 0), ''),
       ${s.title}, ${s.artist}, ${s.category ?? "rohani"}, ${s.original_key}, ${s.bpm}, ${s.content},
-      ${s.status ?? "published"}, ${s.submitted_by ?? null}, ${s.source_url ?? null}, ${genreFor(s)})
+      ${s.status ?? "published"}, ${s.submitted_by ?? null}, ${s.source_url ?? null}, ${genreFor(s)}, ${s.version_of ?? null})
     returning slug`) as { slug: string }[];
   return rows[0].slug;
 }

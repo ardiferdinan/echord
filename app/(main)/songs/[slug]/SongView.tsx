@@ -3,7 +3,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState, ViewTransition } from "react";
 import { detectKey, parseSections, transposeKey, transposeSections } from "@/lib/chordpro";
-import type { Song } from "@/lib/db";
+import type { Song, Version } from "@/lib/db";
+import { useRouter } from "next/navigation";
+import { makePrimary } from "./actions";
 import { useBandContext, useLocal } from "@/lib/storage";
 import { BandContextPicker, ChordSheet } from "@/components/ChordSheet";
 import { FontControl, NumbersControl, TransposeControl } from "@/components/Controls";
@@ -15,7 +17,35 @@ import { usePlayer } from "@/components/player/PlayerProvider";
 import { NoteIcon } from "@/components/icons";
 import { artistHref } from "@/components/library";
 
-export function SongView({ song }: { song: Song }) {
+/** "jrchord.com" -> "JRChord"; songs typed in by hand have no source. */
+const sourceName = (url: string | null) => {
+  if (!url) return "Manual";
+  const host = new URL(url).hostname.replace(/^www\./, "");
+  return ({ "jrchord.com": "JRChord", "psalmnote.com": "PsalmNote" } as Record<string, string>)[host] ?? host;
+};
+
+export function SongView({ song: base, versions = [] }: { song: Song; versions?: Version[] }) {
+  // several sources for this song: the picked one's chords drive the whole page (and what goes into a setlist)
+  const [vi, setVi] = useState(0);
+  const v = versions[vi];
+  const song: Song = v ? { ...base, content: v.content, original_key: v.original_key, bpm: v.bpm, source_url: v.source_url } : base;
+  const router = useRouter();
+  const [swapping, setSwapping] = useState(false);
+  const [swapError, setSwapError] = useState("");
+  const pickVersion = (i: number) => {
+    setVi(i);
+    setTranspose(0); // each source has its own key
+  };
+  const primary = async () => {
+    if (!v || vi === 0) return;
+    setSwapping(true);
+    setSwapError("");
+    const r = await makePrimary(base.id, v.id);
+    setSwapping(false);
+    if (r.error) return setSwapError(r.error);
+    setVi(0);
+    router.refresh();
+  };
   const [transpose, setTranspose] = useState(0);
   const [font, setFont] = useLocal("echord:font", 19);
   const [numbers, setNumbers] = useLocal("echord:numbers", false);
@@ -85,6 +115,29 @@ export function SongView({ song }: { song: Song }) {
           </a>
         )}
       </div>
+
+      {versions.length > 1 && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm" role="group" aria-label="Sumber chord">
+          <span className="font-semibold text-muted">Sumber chord:</span>
+          {versions.map((x, i) => (
+            <button key={x.id} type="button" onClick={() => pickVersion(i)} aria-pressed={vi === i} className="chip">
+              {sourceName(x.source_url ?? null)}
+              {i === 0 && <span className="ml-1 text-[11px] font-semibold opacity-70">utama</span>}
+            </button>
+          ))}
+          {vi > 0 && (
+            <button type="button" onClick={primary} disabled={swapping} className="btn h-8 px-3 text-xs sm:h-8" title="Versi ini yang tampil pertama dan dipakai di setlist">
+              {swapping ? "Menyimpan…" : "Jadikan utama"}
+            </button>
+          )}
+          {v?.source_url && (
+            <a href={v.source_url} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-muted hover:text-ink hover:underline">
+              buka sumber ↗
+            </a>
+          )}
+          {swapError && <span className="text-xs text-hot" role="alert">{swapError}</span>}
+        </div>
+      )}
 
       <div className="mt-4 grid gap-10 xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0">

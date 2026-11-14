@@ -1,7 +1,8 @@
 // Import chord pages into the DB (private library). Fetching via Scrapling: scripts/scrape.py.
 // Run: npx tsx --env-file=.env.local scripts/import.mts <url ...> [--file urls.txt] [--letter a] [--save]
 //      npx tsx --env-file=.env.local scripts/import.mts --jsonl scripts/psalmnote.jsonl [--save]
-//        (songs already crawled by scripts/psalmnote.py; only Indonesian/English, skips songs we already have)
+//        (songs already crawled by scripts/psalmnote.py; only Indonesian/English. A song we already have
+//         from another site is saved as a version of it, to pick on the song page; same site = skipped)
 // Without --save it only prints the converted ChordPro. With --save, already-imported URLs are skipped.
 import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -21,21 +22,31 @@ if (letter) urls = urls.filter((u) => new URL(u).pathname.slice(1).startsWith(le
 const done = save ? await importedUrls() : new Set<string>();
 urls = urls.filter((u) => !done.has(u));
 
-// --jsonl: a song we already have (same title, same or unknown artist) is skipped, whatever the source
+// --jsonl: a song we already have (same title, same or unknown artist) from ANOTHER site becomes a version
+// of it (status 'version'); from the same site (PsalmNote's "-2" duplicate pages) it is skipped
 let rows: AsyncIterable<string> | string[];
 let skipped = 0;
+const versionOf = new Map<string, number>(); // url -> id of the song it is a version of
 if (jsonl) {
-  const have = await songKeys();
-  const dup = (r: Row) =>
-    have.some((h) => similar(norm(h.title), norm(r.title)) >= 0.9 && (!h.artist || !r.artist || artistMatches(h.artist, r.artist)));
+  const have: { id: number; title: string; artist: string | null; host: string }[] = (await songKeys())
+    .filter((h) => !h.version_of)
+    .map((h) => ({ id: h.id, title: h.title, artist: h.artist, host: h.source_url ? new URL(h.source_url).host : "" }));
+  const named = (a: string | null) => (a && norm(a) ? a : null); // "-" = no artist
+  const match = (r: Row) =>
+    have.find((h) => similar(norm(h.title), norm(r.title)) >= 0.9 && (!named(h.artist) || !named(r.artist) || artistMatches(h.artist!, r.artist)));
   const all = readFileSync(jsonl, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l) as Row);
+  const seen = new Set<string>(); // the crawl file can list a page twice
   const fresh = all.filter((r) => {
-    if (done.has(r.url) || !["ind", "eng"].includes(r.lang ?? "") || dup(r)) return (skipped++, false);
-    have.push(r); // PsalmNote lists some songs twice ("-2" urls)
+    if (done.has(r.url) || seen.has(r.url) || !["ind", "eng"].includes(r.lang ?? "")) return (skipped++, false);
+    seen.add(r.url);
+    const m = match(r);
+    if (m && (m.id < 0 || m.host === new URL(r.url).host)) return (skipped++, false);
+    if (m) versionOf.set(r.url, m.id);
+    else have.push({ id: -1, title: r.title, artist: r.artist, host: new URL(r.url).host }); // new this run
     return true;
   });
   rows = fresh.map((r) => JSON.stringify(r));
-  console.log(`${all.length} di file, ${skipped} dilewati (sudah ada / bukan ind-eng), ${fresh.length} baru.`);
+  console.log(`${all.length} di file, ${skipped} dilewati (sudah ada dari situs ini / bukan ind-eng), ${fresh.length - versionOf.size} lagu baru, ${versionOf.size} versi dari lagu yang sudah ada.`);
 } else {
   if (!urls.length) {
     console.log("Tidak ada URL baru untuk diimport.");
@@ -56,10 +67,11 @@ for await (const line of rows) {
     const { content, key } = importText(r.text);
     if (!content.trim()) throw new Error("isi kosong setelah konversi");
     if (!save) {
-      console.log(`\n# ${r.title} — ${r.artist} · key ${r.key || key}\n${content}`);
+      console.log(`\n# ${versionOf.has(r.url) ? "[versi] " : "[baru] "}${r.title} — ${r.artist} · key ${r.key || key}\n${content}`);
     } else {
-      const slug = await insertSong({ title: r.title, artist: r.artist || null, original_key: r.key || key, bpm: r.bpm, content, status: "published", source_url: r.url });
-      console.log(`[${n}/${total}] ✓ ${r.title} → /songs/${slug}`);
+      const of = versionOf.get(r.url);
+      const slug = await insertSong({ title: r.title, artist: r.artist || null, original_key: r.key || key, bpm: r.bpm, content, status: of ? "version" : "published", source_url: r.url, version_of: of ?? null });
+      console.log(`[${n}/${total}] ✓ ${r.title} → ${of ? `versi dari lagu #${of}` : `/songs/${slug}`}`);
     }
     ok++;
   } catch (e) {

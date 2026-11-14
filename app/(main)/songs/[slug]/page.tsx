@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { getSong } from "@/lib/db";
+import { getSong, songVersions } from "@/lib/db";
 import { SongView } from "./SongView";
 
 export async function generateMetadata({ params }: PageProps<"/songs/[slug]">) {
@@ -21,6 +21,9 @@ async function Song({ params }: Pick<PageProps<"/songs/[slug]">, "params">) {
   await connection();
   const song = await getSong((await params).slug);
   if (!song) notFound();
-  return <SongView song={song} />;
+  const others = await songVersions(song.id);
+  // the song's own chords first, then other sources' (PsalmNote next to JRChord…)
+  const versions = others.length ? [{ id: song.id, source_url: song.source_url ?? null, content: song.content, original_key: song.original_key, bpm: song.bpm }, ...others] : [];
+  return <SongView song={song} versions={versions} />;
 }
 

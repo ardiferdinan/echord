@@ -29,6 +29,10 @@ alter table songs add column if not exists deezer_id bigint;
 alter table songs add column if not exists genre text;
 create index if not exists songs_genre on songs (genre);
 
+-- another source's chords for the same song (e.g. PsalmNote next to JRChord): status 'version', hidden from lists
+alter table songs add column if not exists version_of int references songs(id) on delete cascade;
+create index if not exists songs_version_of on songs (version_of);
+
 -- shared setlist snapshots; token lets the creator update the same link
 create table if not exists shared_setlists (
   id text primary key,
