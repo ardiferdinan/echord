@@ -11,5 +11,5 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   // everything except login, shared setlist links (/s/…, read-only) and static assets
-  matcher: ["/((?!login|s/|_next/static|_next/image|favicon.ico|.*\\.(?:woff2?|png|jpg|svg|ico)$).*)"],
+  matcher: ["/((?!login|s/|_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:woff2?|png|jpg|svg|ico)$).*)"],
 };

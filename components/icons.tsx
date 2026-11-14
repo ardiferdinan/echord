@@ -68,3 +68,4 @@ export const ArrowRightIcon = (p: P) => <svg {...line(p)} strokeWidth={2.4}><pat
 export const MinusIcon = (p: P) => <svg {...line(p)} strokeWidth={2.4}><path d="M5 12h14" /></svg>;
 export const CopyIcon = (p: P) => <svg {...line(p)}><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" /></svg>;
 export const PencilIcon = (p: P) => <svg {...line(p)}><path d="M4 20h4L19 9l-4-4L4 16v4ZM13.5 6.5l4 4" /></svg>;
+export const ColumnsIcon = (p: P) => <svg {...line(p)}><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16M15 4v16" /></svg>;

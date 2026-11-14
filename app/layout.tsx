@@ -13,6 +13,8 @@ const satoshi = localFont({
 export const metadata: Metadata = {
   title: { default: "Echord · Chord lagu rohani", template: "%s · Echord" },
   description: "Perpustakaan chord lagu rohani pribadi: transpose, chord angka, diagram gitar dan piano, setlist, dan preview lagu.",
+  // opened from the home screen: no browser bars, dark status bar
+  appleWebApp: { capable: true, title: "Echord", statusBarStyle: "black-translucent" },
 };
 export const viewport: Viewport = { themeColor: "#000000" };
 

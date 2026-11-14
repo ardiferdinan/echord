@@ -9,7 +9,24 @@ import { ChordSheet } from "@/components/ChordSheet";
 import { arranged } from "@/components/SetlistEditor";
 import { ChordShapes } from "@/components/ChordShapes";
 import { SheetColorButton } from "@/components/SheetColors";
-import { ArrowRightIcon, ChevronIcon, ChordIcon, CloseIcon, ExpandIcon, MinusIcon, NoteIcon, PauseIcon, PlayIcon, PlusIcon } from "@/components/icons";
+import { Popover } from "@/components/Popover";
+import { ArrowRightIcon, ChevronIcon, ChordIcon, CloseIcon, ColumnsIcon, DotsIcon, ExpandIcon, MinusIcon, NoteIcon, PauseIcon, PlayIcon, PlusIcon } from "@/components/icons";
+
+type WebkitDoc = Document & { webkitFullscreenElement?: Element; webkitExitFullscreen?: () => void };
+type WebkitEl = HTMLElement & { webkitRequestFullscreen?: () => void };
+/** Full screen on and off; iPad browsers (all WebKit, Brave too) only have the webkit-prefixed API. false = not supported. */
+function toggleFullscreen() {
+  const d = document as WebkitDoc, el = document.documentElement as WebkitEl;
+  if (d.fullscreenElement ?? d.webkitFullscreenElement) {
+    if (d.exitFullscreen) d.exitFullscreen();
+    else d.webkitExitFullscreen?.();
+    return true;
+  }
+  if (el.requestFullscreen) el.requestFullscreen().catch(() => el.webkitRequestFullscreen?.());
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  else return false;
+  return true;
+}
 
 /** Stage for a setlist saved in this browser. */
 export function LocalStage({ id }: { id: string }) {
@@ -31,6 +48,7 @@ export function Stage({ setlist, backHref, printHref, editHref, onTranspose }: {
   const [shapes, setShapes] = useLocal("echord:stage-shapes", false); // chord shapes panel
   const [all, setAll] = useLocal("echord:stage-all", false); // "show all": the whole song fitted on screen, no scrolling
   const fitBox = useRef<HTMLDivElement>(null);
+  const [fsTip, setFsTip] = useState(false); // browser without the Fullscreen API (iPhone)
   const box = useRef<HTMLDivElement>(null);
   const [shift, setShift] = useState<Record<string, number>>({}); // key changes on a shared setlist (not saved)
   const items = setlist.items.map((it) => (it.id in shift ? { ...it, transpose: shift[it.id] } : it));
@@ -116,37 +134,94 @@ export function Stage({ setlist, backHref, printHref, editHref, onTranspose }: {
 
   const key = item?.originalKey ? transposeKey(item.originalKey, item.transpose) : null;
 
+  // view settings, shown inline on wide screens and in the ⋯ menu on narrow ones
+  const tools = (
+    <>
+      <button className="btn-icon" onClick={() => setFont(Math.max(14, font - 2))} aria-label="A− perkecil teks">A−</button>
+      <button className="btn-icon" onClick={() => setFont(Math.min(48, font + 2))} aria-label="A+ perbesar teks">A+</button>
+      <button className="grid h-11 shrink-0 place-items-center rounded-full px-3 font-bold transition hover:bg-white/10 aria-pressed:bg-ink aria-pressed:text-app sm:h-10" onClick={() => setNumbers(!numbers)} aria-pressed={numbers} title="Nama chord / chord angka">
+        {numbers ? "123" : "Abc"}
+      </button>
+      <SheetColorButton />
+      <button className="grid h-11 shrink-0 place-items-center rounded-full px-3 transition hover:bg-white/10 aria-pressed:bg-ink aria-pressed:text-app sm:h-10" onClick={() => setShapes(!shapes)} aria-pressed={shapes} aria-label="Bentuk chord" title="Bentuk chord">
+        <ChordIcon className="size-5" />
+      </button>
+      {printHref && <Link href={printHref} target="_blank" className="grid h-11 shrink-0 place-items-center rounded-full px-3 font-bold transition hover:bg-white/10 sm:h-10" title="Cetak / simpan PDF">PDF</Link>}
+    </>
+  );
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-panel text-ink">
       {/* floating top pill */}
-      <div className="mx-3 mt-3 flex items-center gap-1 overflow-x-auto rounded-full bg-[#1f1f1f] p-1.5 pr-2 text-sm [scrollbar-width:none] sm:mx-6 sm:gap-1.5 [&>*]:shrink-0">
-        <Link href={backHref} className="grid size-11 place-items-center rounded-full bg-black/40 text-muted hover:text-ink sm:size-10" aria-label="Keluar stage mode"><CloseIcon className="size-5" /></Link>
+      <div className="mx-3 mt-3 flex items-center gap-1 overflow-x-auto rounded-full bg-[#1f1f1f] p-1.5 pr-2 text-sm [scrollbar-width:none] max-sm:[&_.btn-icon]:size-10 sm:mx-6 sm:gap-1.5 [&>*]:shrink-0">
+        <Link href={backHref} className="grid size-10 place-items-center rounded-full bg-black/40 text-muted hover:text-ink sm:size-10" aria-label="Keluar stage mode"><CloseIcon className="size-5" /></Link>
         <span className="px-1 text-base font-bold tabular-nums sm:px-2 sm:text-lg">
           {String(i + 1).padStart(2, "0")}
           <span className="text-muted">/{String(items.length).padStart(2, "0")}</span>
         </span>
-        <div className="mr-auto hidden min-w-0 gap-1 sm:flex" aria-hidden>
+        <div className="hidden min-w-0 gap-1 md:flex" aria-hidden>
           {items.map((it, k) => (
             <button key={it.id} onClick={() => go(k)} tabIndex={-1} title={it.title} className={`h-2 rounded-full transition-all ${k === i ? "w-8 bg-brand" : k < i ? "w-2 bg-muted" : "w-2 bg-white/20"}`} />
           ))}
         </div>
-        <span className="!shrink flex-1 sm:hidden" />
-        <button className="btn-icon" onClick={() => setFont(Math.max(14, font - 2))} aria-label="A− perkecil teks">A−</button>
-        <button className="btn-icon" onClick={() => setFont(Math.min(48, font + 2))} aria-label="A+ perbesar teks">A+</button>
-        <button className="grid h-11 shrink-0 place-items-center rounded-full px-3 font-bold transition hover:bg-white/10 aria-pressed:bg-ink aria-pressed:text-app sm:h-10" onClick={() => setNumbers(!numbers)} aria-pressed={numbers} title="Nama chord / chord angka">
-          {numbers ? "123" : "Abc"}
+        <button className="btn-icon disabled:opacity-30" disabled={i === 0} onClick={() => go(i - 1)} aria-label="Lagu sebelumnya" title="Lagu sebelumnya (←)">
+          <ChevronIcon className="size-5" />
         </button>
-        <SheetColorButton />
-        <button className="grid h-11 shrink-0 place-items-center rounded-full px-3 transition hover:bg-white/10 aria-pressed:bg-ink aria-pressed:text-app sm:h-10" onClick={() => setShapes(!shapes)} aria-pressed={shapes} aria-label="Bentuk chord" title="Bentuk chord">
-          <ChordIcon className="size-5" />
+        <button className="btn-icon bg-brand text-on-brand hover:brightness-110 disabled:opacity-30" disabled={i >= items.length - 1} onClick={() => go(i + 1)} aria-label="Lagu berikutnya" title="Lagu berikutnya (→)">
+          <ChevronIcon dir="right" className="size-5" />
         </button>
-        {printHref && <Link href={printHref} target="_blank" className="hidden h-10 shrink-0 place-items-center rounded-full px-3 font-bold transition hover:bg-white/10 sm:grid" title="Cetak / simpan PDF">PDF</Link>}
-        <button className="btn-icon hidden sm:grid" onClick={() => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen())} aria-label="Layar penuh"><ExpandIcon className="size-5" /></button>
+        <span className="!shrink min-w-2 flex-1" />
+        {!all && (
+          <>
+            <button className={`flex h-11 items-center gap-2 rounded-full px-3 font-bold transition sm:h-10 ${scrolling ? "bg-ink text-app" : "hover:bg-white/10"}`} onClick={() => setScrolling(!scrolling)} aria-pressed={scrolling} title="Auto-scroll (spasi)">
+              {scrolling ? <PauseIcon className="size-4" /> : <PlayIcon className="size-4" />} <span className="hidden lg:inline">Auto-scroll</span>
+            </button>
+            <input type="range" min={5} max={80} value={speed} onChange={(e) => setSpeed(+e.target.value)} className="range hidden w-16 sm:block lg:w-24" style={{ ["--fill" as string]: `${((speed - 5) / 75) * 100}%` }} aria-label="Kecepatan auto-scroll" title="Kecepatan auto-scroll" />
+          </>
+        )}
+        <button
+          className={`flex h-11 items-center gap-2 rounded-full px-3 font-bold transition sm:h-10 ${all ? "bg-ink text-app" : "hover:bg-white/10"}`}
+          onClick={() => {
+            setScrolling(false);
+            box.current?.scrollTo({ top: 0 });
+            setAll(!all);
+          }}
+          aria-pressed={all}
+          title="Tampilkan seluruh lagu dalam satu layar"
+        >
+          <ColumnsIcon className="size-4" /> <span className="hidden lg:inline">Semua</span>
+        </button>
+        <span className="mx-1 hidden h-6 w-px bg-white/10 lg:block" aria-hidden />
+        {/* view settings: inline on wide screens, behind ⋯ on tablets in portrait and phones */}
+        <div className="hidden items-center gap-1.5 lg:flex">{tools}</div>
+        <Popover label="Pengaturan tampilan" buttonClass="btn-icon lg:hidden data-[open]:bg-white/10" button={<DotsIcon className="size-5" />} panelClass="w-auto p-2">
+          {() => (
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {tools}
+                <button className="btn-icon sm:hidden" onClick={() => toggleFullscreen() || setFsTip(true)} aria-label="Layar penuh" title="Layar penuh"><ExpandIcon className="size-5" /></button>
+              </div>
+              {!all && (
+                <label className="flex items-center gap-3 px-2 pb-1 text-sm text-muted sm:hidden">
+                  Kecepatan scroll
+                  <input type="range" min={5} max={80} value={speed} onChange={(e) => setSpeed(+e.target.value)} className="range w-32" style={{ ["--fill" as string]: `${((speed - 5) / 75) * 100}%` }} />
+                </label>
+              )}
+            </div>
+          )}
+        </Popover>
+        <button className="btn-icon hidden sm:grid" onClick={() => toggleFullscreen() || setFsTip(true)} aria-label="Layar penuh" title="Layar penuh"><ExpandIcon className="size-5" /></button>
       </div>
 
+      {fsTip && (
+        <div role="status" className="mx-3 mt-2 flex items-start gap-3 rounded-lg bg-[#282828] p-3 text-sm sm:mx-6">
+          <p className="flex-1">Browser ini tidak mendukung layar penuh. Cara lain: buka menu <b>Bagikan</b> → <b>Tambah ke Layar Utama</b>, lalu buka Echord dari ikon itu. Tampilannya tanpa bar browser.</p>
+          <button className="btn-icon size-8 sm:size-8" onClick={() => setFsTip(false)} aria-label="Tutup"><CloseIcon className="size-4" /></button>
+        </div>
+      )}
       <div
         ref={box}
-        className={`flex-1 px-3 pt-5 sm:px-6 ${all ? "overflow-hidden pb-24" : "overflow-y-auto pb-28"}`}
+        className={`flex-1 px-3 pt-5 sm:px-6 ${all ? "overflow-hidden pb-4" : "overflow-y-auto pb-16"}`}
         onTouchStart={(e) => (touch.current = fitBox.current?.contains(e.target as Node) && fitBox.current.scrollWidth > fitBox.current.clientWidth ? null : { x: e.touches[0].clientX, y: e.touches[0].clientY })}
         onTouchEnd={(e) => {
           const t = touch.current;
@@ -216,39 +291,6 @@ export function Stage({ setlist, backHref, printHref, editHref, onTranspose }: {
         )}
       </div>
 
-      {/* floating bottom control pill */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center px-3">
-        <div className="pointer-events-auto flex w-full max-w-xl items-center gap-1.5 rounded-full bg-[#282828] p-1.5 text-sm shadow-2xl shadow-black/60">
-          <button className="grid size-12 shrink-0 place-items-center rounded-full text-muted hover:text-ink disabled:opacity-30" disabled={i === 0} onClick={() => go(i - 1)} aria-label="Lagu sebelumnya">
-            <ChevronIcon className="size-5" />
-          </button>
-          {all && <span className="flex-1" />}
-          {!all && (
-            <>
-              <button className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-full font-bold transition ${scrolling ? "bg-ink text-app" : "hover:bg-white/10"}`} onClick={() => setScrolling(!scrolling)}>
-                {scrolling ? <PauseIcon className="size-4" /> : <PlayIcon className="size-4" />} Auto-scroll
-              </button>
-              <input type="range" min={5} max={80} value={speed} onChange={(e) => setSpeed(+e.target.value)} className="range w-14 sm:w-24" style={{ ["--fill" as string]: `${((speed - 5) / 75) * 100}%` }} aria-label="Kecepatan auto-scroll" />
-            </>
-          )}
-          <button
-            className={`flex h-12 items-center justify-center gap-2 rounded-full px-4 font-bold transition ${all ? "bg-ink text-app" : "hover:bg-white/10"}`}
-            onClick={() => {
-              setScrolling(false);
-              box.current?.scrollTo({ top: 0 });
-              setAll(!all);
-            }}
-            aria-pressed={all}
-            title="Tampilkan seluruh lagu dalam satu layar"
-          >
-            <ExpandIcon className="size-4" /> Semua
-          </button>
-          {all && <span className="flex-1" />}
-          <button className="grid size-12 shrink-0 place-items-center rounded-full bg-brand text-on-brand hover:brightness-110 disabled:opacity-30" disabled={i >= items.length - 1} onClick={() => go(i + 1)} aria-label="Lagu berikutnya">
-            <ChevronIcon dir="right" className="size-5" />
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
