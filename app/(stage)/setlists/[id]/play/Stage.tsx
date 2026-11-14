@@ -126,7 +126,12 @@ export function Stage({ setlist, backHref, printHref, editHref, onTranspose }: {
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      // leave no fitted columns / font behind when "Semua" is switched off
+      el.style.columnCount = el.style.overflowX = "";
+      (el.firstElementChild as HTMLElement | null)?.style.removeProperty("font-size");
+    };
   }, [all, i, font, numbers, shapes, item?.id, item?.transpose, item?.content]);
 
   // swipe left/right
@@ -265,11 +270,11 @@ export function Stage({ setlist, backHref, printHref, editHref, onTranspose }: {
             {item.notes && <p className="mb-6 rounded-md bg-[#1f1f1f] px-4 py-3 text-base">{item.notes}</p>}
             {shapes && <ChordShapes sections={arranged(item)} className="mb-8 lg:hidden" />}
             {all ? (
-              <div ref={fitBox} className="flow min-h-0 flex-1 overflow-hidden px-2 [column-fill:auto] [column-gap:3rem] [column-rule:1px_solid_rgb(255_255_255/.1)] sm:px-4">
+              <div key="fit-box" ref={fitBox} className="flow min-h-0 flex-1 overflow-hidden px-2 [column-fill:auto] [column-gap:3rem] [column-rule:1px_solid_rgb(255_255_255/.1)] sm:px-4">
                 <ChordSheet key="fit" sections={arranged(item)} fontSize={font} numberKey={numbers ? key || detectKey(arranged(item)) : undefined} />
               </div>
             ) : (
-              <div className="px-2 sm:px-4">
+              <div key="scroll-box" className="px-2 sm:px-4">
                 <ChordSheet key="scroll" sections={arranged(item)} fontSize={font} numberKey={numbers ? key || detectKey(arranged(item)) : undefined} />
               </div>
             )}
