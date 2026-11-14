@@ -27,7 +27,11 @@ const tool = "grid size-8 place-items-center rounded-full text-muted transition 
  * Edit a setlist song in place: the flow as a list of part tags (a part already played shows [...],
  * a repeat right after itself shows 2X), lines edited right where they are (chords over lyrics).
  */
-export function FlowEditor({ item, onChange }: { item: SetlistItem; onChange: (p: Partial<SetlistItem>) => void }) {
+export function FlowEditor({ item, onChange, collapsible = true }: {
+  item: Pick<SetlistItem, "content" | "order" | "transpose" | "originalKey">;
+  onChange: (p: Partial<Pick<SetlistItem, "content" | "order">>) => void;
+  collapsible?: boolean; // song form: the flow IS the song, nothing to collapse
+}) {
   const sections = useMemo(() => parseSections(item.content), [item.content]);
   const key = item.originalKey ? transposeKey(item.originalKey, item.transpose) : undefined;
   const shown = useMemo(() => transposeSections(sections, item.transpose, key), [sections, item.transpose, key]);
@@ -69,6 +73,7 @@ export function FlowEditor({ item, onChange }: { item: SetlistItem; onChange: (p
                   sortId={keys[i]}
                   s={shown[si]}
                   group={g}
+                  collapsible={collapsible}
                   onToggle={() => setGroup(i, { collapsed: !g.collapsed })}
                   onCount={(n) => setGroup(i, { count: n })}
                   onSave={(next) => saveSection(si, next)}
@@ -84,12 +89,12 @@ export function FlowEditor({ item, onChange }: { item: SetlistItem; onChange: (p
           value=""
           onChange={(e) => {
             const id = e.target.value;
-            if (id) onChange({ order: [...item.order, item.order.some((x) => flowId(x) === id) ? id + "*" : id] });
+            if (id) onChange({ order: [...item.order, collapsible && item.order.some((x) => flowId(x) === id) ? id + "*" : id] });
           }}
           className="h-9 rounded-full bg-surface-2 px-4 text-sm font-semibold text-muted"
           aria-label="Tambah bagian ke alur"
         >
-          <option value="">+ Ulangi bagian…</option>
+          <option value="">{collapsible ? "+ Ulangi bagian…" : "+ Salin bagian…"}</option>
           {shown.map((s) => (
             <option key={s.id} value={s.id}>{s.label}</option>
           ))}
@@ -100,8 +105,8 @@ export function FlowEditor({ item, onChange }: { item: SetlistItem; onChange: (p
   );
 }
 
-function Part({ sortId, s, group, onToggle, onCount, onSave }: {
-  sortId: string; s: Section; group: Group; onToggle: () => void; onCount: (n: number) => void; onSave: (s: Section) => void;
+function Part({ sortId, s, group, collapsible, onToggle, onCount, onSave }: {
+  sortId: string; s: Section; group: Group; collapsible: boolean; onToggle: () => void; onCount: (n: number) => void; onSave: (s: Section) => void;
 }) {
   const expanded = !group.collapsed;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: sortId });
@@ -127,7 +132,7 @@ function Part({ sortId, s, group, onToggle, onCount, onSave }: {
           </button>
         )}
         {group.count > 1 && <span className="grid h-7 min-w-7 place-items-center rounded-full bg-[#2b3a8c] px-1.5 text-xs font-black text-white" aria-label={`diulang ${group.count} kali`}>{group.count}X</span>}
-        <button
+        {collapsible && <button
           type="button"
           onClick={onToggle}
           aria-pressed={group.collapsed}
@@ -136,7 +141,7 @@ function Part({ sortId, s, group, onToggle, onCount, onSave }: {
           aria-label={group.collapsed ? `Tampilkan isi ${s.label}` : `Ciutkan ${s.label} jadi [...]`}
         >
           [...]
-        </button>
+        </button>}
         <span className="ml-auto flex items-center opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100">
           <button type="button" className={tool} onClick={() => onCount(group.count - 1)} disabled={group.count < 2} aria-label={`Kurangi ulangan ${s.label}`} title="Kurangi ulangan"><MinusIcon className="size-4" /></button>
           <button type="button" className={tool} onClick={() => onCount(group.count + 1)} aria-label={`Ulangi ${s.label} sekali lagi`} title="Ulangi sekali lagi"><PlusIcon className="size-4" /></button>

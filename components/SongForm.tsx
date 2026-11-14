@@ -1,9 +1,10 @@
 "use client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { importText, parseSections } from "@/lib/chordpro";
+import { flowId, importText, parseSections, serialize } from "@/lib/chordpro";
 import { ChordSheet } from "@/components/ChordSheet";
 import { ClickEditor } from "@/components/ClickEditor";
+import { FlowEditor } from "@/components/FlowEditor";
 import { saveSong } from "@/app/(main)/admin/actions";
 
 type Lyric = { id: number; trackName: string; artistName: string; plainLyrics: string };
@@ -12,7 +13,7 @@ const EMPTY = { title: "", artist: "", key: "", bpm: "" };
 export function SongForm() {
   const [text, setText] = useState("");
   const [meta, setMeta] = useState(EMPTY); // user overrides; empty = use auto-detected
-  const [mode, setMode] = useState<"paste" | "click">("paste");
+  const [mode, setMode] = useState<"paste" | "visual" | "click">("paste");
   const [queue, setQueue] = useState<string[]>([]);
   const [status, setStatus] = useState<{ ok?: string; error?: string }>({});
   const [saving, setSaving] = useState(false);
@@ -22,6 +23,19 @@ export function SongForm() {
   const artist = meta.artist || imported.artist || "";
   const key = meta.key || imported.key;
   const sections = useMemo(() => parseSections(imported.content), [imported.content]);
+
+  // editors hand back ChordPro, which drops the "Title - Artist" line: pin the detected meta first
+  const setContent = (c: string) => {
+    setMeta((m) => ({ ...m, title: m.title || title, artist: m.artist || artist }));
+    setText(c);
+  };
+  /** Visual editor: its flow (reordered, repeated, removed parts) becomes the song itself. */
+  const onVisual = (p: { content?: string; order?: string[] }) => {
+    const base = parseSections(p.content ?? imported.content);
+    if (!p.order) return setContent(serialize(base));
+    const byId = new Map(base.map((x) => [x.id, x]));
+    setContent(serialize(p.order.flatMap((e) => byId.get(flowId(e)) ?? [])));
+  };
 
   const load = (t: string) => {
     setText(t);
@@ -100,9 +114,9 @@ export function SongForm() {
         <div>
           <div className="mb-2 flex items-center gap-2">
             <div className="flex h-11 rounded-full bg-surface-2 p-1 text-sm sm:h-10">
-              {(["paste", "click"] as const).map((m) => (
+              {(["paste", "visual", "click"] as const).map((m) => (
                 <button key={m} onClick={() => setMode(m)} className={`rounded-full px-4 font-semibold ${mode === m ? "bg-ink text-app" : "text-muted hover:text-ink"}`}>
-                  {m === "paste" ? "Teks" : "Klik chord"}
+                  {{ paste: "Teks", visual: "Visual", click: "Klik chord" }[m]}
                 </button>
               ))}
             </div>
@@ -120,17 +134,27 @@ export function SongForm() {
               className="input h-auto py-3 min-h-[28rem] font-mono text-base leading-relaxed sm:text-[13px]"
               aria-label="Teks lagu"
             />
+          ) : mode === "visual" ? (
+            <div className="min-h-[28rem] rounded-lg bg-card p-3 sm:p-4">
+              {sections.length ? (
+                <>
+                  <p className="mb-2 px-2 text-xs text-muted">Klik baris untuk edit chord & lirik · geser penanda untuk mengubah urutan · klik dua kali penanda untuk ganti nama.</p>
+                  <FlowEditor item={{ content: imported.content, order: sections.map((x) => x.id), transpose: 0, originalKey: key || null }} onChange={onVisual} collapsible={false} />
+                </>
+              ) : (
+                <div className="grid place-items-center gap-3 py-16 text-center">
+                  <p className="text-sm text-muted">Belum ada isi. Paste di tab Teks, cari lirik di atas, atau mulai dari kosong.</p>
+                  <button className="btn" onClick={() => setContent(serialize([{ id: "s0", label: "Verse 1", type: "verse", lines: [{ text: "", chords: [] }] }]))}>Mulai dari kosong</button>
+                </div>
+              )}
+            </div>
           ) : (
             <div className="min-h-[28rem] rounded-lg bg-card p-5">
               {sections.length ? (
                 <ClickEditor
                   content={imported.content}
                   songKey={key}
-                  onChange={(c) => {
-                    // serialized ChordPro drops the "Title - Artist" line: pin detected meta first
-                    setMeta((m) => ({ ...m, title: m.title || title, artist: m.artist || artist }));
-                    setText(c);
-                  }}
+                  onChange={setContent}
                 />
               ) : (
                 <p className="text-sm text-muted">Belum ada lirik. Cari lirik di atas atau paste di tab Teks.</p>

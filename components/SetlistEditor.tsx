@@ -10,6 +10,7 @@ import type { Song } from "@/lib/db";
 import { newItem, useHydrated, useSetlists, type Setlist, type SetlistItem } from "@/lib/storage";
 import { shareSetlist } from "@/app/(main)/setlists/actions";
 import { FlowEditor } from "./FlowEditor";
+import { ConfirmButton } from "./ConfirmButton";
 import { TransposeControl } from "./Controls";
 import { Mosaic } from "./shell/Mosaic";
 import { PlayIcon, TrashIcon } from "./icons";
@@ -99,14 +100,15 @@ export function SetlistEditor({ id }: { id: string }) {
         <Link href={`/setlists/${id}/print`} target="_blank" className="btn" aria-disabled={!setlist.items.length} title="Satu lagu per lembar A4">
           Cetak PDF
         </Link>
-        <button
+        <ConfirmButton
           className="btn-icon"
-          onClick={() => confirm(`Hapus setlist "${setlist.name}"?`) && (setSetlists((all) => all.filter((s) => s.id !== id)), router.push("/setlists"))}
-          aria-label="Hapus setlist"
-          title="Hapus setlist"
+          armedClassName="!w-auto !px-4 bg-hot/20 text-hot text-sm font-bold"
+          label="Hapus setlist"
+          confirmLabel="Yakin hapus setlist?"
+          onConfirm={() => (setSetlists((all) => all.filter((s) => s.id !== id)), router.push("/setlists"))}
         >
           <TrashIcon className="size-5" />
-        </button>
+        </ConfirmButton>
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
@@ -134,6 +136,23 @@ function SongCard({ item, n, onChange, onRemove }: { item: SetlistItem; n: numbe
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const [open, setOpen] = useState(() => new URLSearchParams(window.location.search).get("edit") === item.id); // from stage's "Edit lagu ini"; items render client-side only
   const [raw, setRaw] = useState(false); // advanced: the ChordPro text itself
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState("");
+  /** Back to the song as it is in the library: chords & lyrics, full flow, original key (notes stay). */
+  const resetAll = async () => {
+    setResetting(true);
+    setResetError("");
+    try {
+      const res = await fetch(`/api/songs/${encodeURIComponent(item.slug)}`);
+      if (!res.ok) throw new Error("Lagu asli tidak ditemukan");
+      const song = (await res.json()) as Song;
+      onChange({ content: song.content, order: parseSections(song.content).map((s) => s.id), transpose: 0, originalKey: song.original_key, artwork: song.artwork_url ?? item.artwork });
+    } catch (e) {
+      setResetError((e as Error).message);
+    } finally {
+      setResetting(false);
+    }
+  };
   const sections = useMemo(() => parseSections(item.content), [item.content]);
   const byId = new Map(sections.map((s) => [s.id, s]));
 
@@ -161,6 +180,9 @@ function SongCard({ item, n, onChange, onRemove }: { item: SetlistItem; n: numbe
           </span>
         </button>
         <TransposeControl value={item.transpose} onChange={(t) => onChange({ transpose: t })} originalKey={item.originalKey} />
+        <ConfirmButton className="btn-icon text-muted hover:text-hot" armedClassName="!w-auto !px-3 bg-hot/20 !text-hot text-xs font-bold" label={`Hapus ${item.title} dari setlist`} confirmLabel="Hapus?" onConfirm={onRemove}>
+          <TrashIcon className="size-5" />
+        </ConfirmButton>
         <button className="btn-icon hidden sm:grid" onClick={() => setOpen(!open)} aria-label={open ? "Tutup" : "Atur alur"}>{open ? "▴" : "▾"}</button>
       </div>
 
@@ -178,12 +200,24 @@ function SongCard({ item, n, onChange, onRemove }: { item: SetlistItem; n: numbe
           />
 
           <div className="mt-3 flex flex-wrap gap-2">
-            <button className="btn" onClick={() => onChange({ order: sections.map((s) => s.id) })}>Reset alur</button>
+            <button className="btn" onClick={() => onChange({ order: sections.map((s) => s.id) })} title="Urutan bagian kembali seperti lagu, tanpa ulangan atau ciutan">Reset alur</button>
+            <ConfirmButton
+              className={`btn ${resetting ? "pointer-events-none opacity-50" : ""}`}
+              armedClassName="!border-ink !bg-ink !text-app"
+              label="Kembalikan chord, lirik, alur dan kunci seperti lagu asli"
+              confirmLabel="Yakin? Semua editan hilang"
+              onConfirm={resetAll}
+            >
+              Reset ke lagu asli
+            </ConfirmButton>
             <Link href={`/songs/${item.slug}`} className="btn">Lagu asli</Link>
             <button className="btn" onClick={() => setRaw(!raw)} aria-expanded={raw}>{raw ? "Tutup teks ChordPro" : "Teks ChordPro"}</button>
-            <button className="btn ml-auto border-hot/50 text-hot hover:border-hot" onClick={() => confirm(`Hapus "${item.title}" dari setlist?`) && onRemove()}>Hapus dari setlist</button>
+            <ConfirmButton className="btn ml-auto border-hot/50 text-hot hover:border-hot" armedClassName="!border-hot !bg-hot !text-black" confirmLabel="Ya, hapus dari setlist" onConfirm={onRemove}>
+              Hapus dari setlist
+            </ConfirmButton>
           </div>
 
+          {resetError && <p className="mt-2 text-sm text-hot" role="alert">{resetError}</p>}
           {raw && (
             <textarea
               value={item.content}
