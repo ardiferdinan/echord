@@ -6,6 +6,7 @@ import { detectKey, parseSections, transposeKey, transposeSections } from "@/lib
 import type { Song, Version } from "@/lib/db";
 import { useRouter } from "next/navigation";
 import { makePrimary } from "./actions";
+import { sourceName } from "@/lib/sources";
 import { useBandContext, useLocal } from "@/lib/storage";
 import { BandContextPicker, ChordSheet } from "@/components/ChordSheet";
 import { FontControl, NumbersControl, TransposeControl } from "@/components/Controls";
@@ -16,13 +17,6 @@ import { SheetColorButton } from "@/components/SheetColors";
 import { usePlayer } from "@/components/player/PlayerProvider";
 import { NoteIcon } from "@/components/icons";
 import { artistHref } from "@/components/library";
-
-/** "jrchord.com" -> "JRChord"; songs typed in by hand have no source. */
-const sourceName = (url: string | null) => {
-  if (!url) return "Manual";
-  const host = new URL(url).hostname.replace(/^www\./, "");
-  return ({ "jrchord.com": "JRChord", "psalmnote.com": "PsalmNote" } as Record<string, string>)[host] ?? host;
-};
 
 export function SongView({ song: base, versions = [] }: { song: Song; versions?: Version[] }) {
   // several sources for this song: the picked one's chords drive the whole page (and what goes into a setlist)

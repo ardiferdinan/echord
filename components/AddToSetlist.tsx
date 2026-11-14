@@ -1,9 +1,10 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { newItem, uid, useSetlists } from "@/lib/storage";
-import type { Song } from "@/lib/db";
+import type { Song, Version } from "@/lib/db";
+import { sourceName } from "@/lib/sources";
 import { Mosaic } from "./shell/Mosaic";
 import { Popover, menuItem } from "./Popover";
 import { CheckCircleIcon, DotsIcon, LinkIcon, NoteIcon, PlusCircleIcon, PlusIcon, QueueAddIcon, SearchIcon, UserIcon, ChevronIcon } from "./icons";
@@ -12,12 +13,35 @@ import { usePlayer } from "./player/PlayerProvider";
 /** What a list row knows; the full song (ChordPro) is fetched when it is first added. */
 export type SongRef = Pick<Song, "id" | "slug" | "title" | "artist"> & Partial<Pick<Song, "artwork_url" | "original_key" | "content">> & { has_preview?: boolean };
 
-const full = async (s: SongRef): Promise<Song> => {
-  if (s.content !== undefined) return s as Song;
+type Full = Omit<Song, "versions"> & { versions?: Version[] };
+const full = async (s: SongRef): Promise<Full> => {
+  if (s.content !== undefined) return s as Song; // the song page passes the source it shows
   const res = await fetch(`/api/songs/${encodeURIComponent(s.slug)}`);
   if (!res.ok) throw new Error("Lagu gagal dimuat");
   return res.json();
 };
+
+/** The song with one of its sources' chords: 0 = its own, 1.. = versions. */
+export function withVersion(s: Full, i: number): Song {
+  const v = i > 0 ? s.versions?.[i - 1] : undefined;
+  return v ? { ...s, content: v.content, original_key: v.original_key, bpm: v.bpm, source_url: v.source_url } : s;
+}
+
+/** Chips to pick which site's chords go into the setlist (only when there is more than one). */
+export function SourceChips({ song, value, onChange, className = "" }: { song: Full; value: number; onChange: (i: number) => void; className?: string }) {
+  if (!song.versions?.length) return null;
+  const all = [song.source_url, ...song.versions.map((v) => v.source_url)];
+  return (
+    <div className={`flex flex-wrap items-center gap-1.5 text-xs ${className}`} role="group" aria-label="Sumber chord">
+      <span className="font-semibold text-muted">Sumber:</span>
+      {all.map((u, i) => (
+        <button key={i} type="button" aria-pressed={value === i} onClick={() => onChange(i)} className={`h-7 rounded-full px-3 font-bold transition ${value === i ? "bg-ink text-app" : "bg-white/10 text-ink hover:bg-white/20"}`}>
+          {sourceName(u)}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /** Is this song in any setlist? (drives the green check on the + button) */
 function useSaved(songId: number) {
@@ -33,12 +57,18 @@ export function SetlistPicker({ song, transpose = 0, onDone }: { song: SongRef; 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const shown = [...setlists].sort((a, b) => b.updatedAt - a.updatedAt).filter((l) => l.name.toLowerCase().includes(q.trim().toLowerCase()));
+  // from a list row: load the song (and its other sources) up front, so the source can be picked first
+  const [loaded, setLoaded] = useState<Full | null>(null);
+  const [vi, setVi] = useState(0);
+  useEffect(() => {
+    if (song.content === undefined) full(song).then(setLoaded, () => {});
+  }, [song]);
 
   const withSong = async (fn: (s: Song) => void) => {
     setBusy(true);
     setError("");
     try {
-      fn(await full(song));
+      fn(withVersion(loaded ?? (await full(song)), vi));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -60,6 +90,7 @@ export function SetlistPicker({ song, transpose = 0, onDone }: { song: SongRef; 
   return (
     <div className="w-full">
       <p className="px-3 pb-2 pt-2 text-sm font-bold">Tambahkan ke setlist</p>
+      {loaded && <SourceChips song={loaded} value={vi} onChange={setVi} className="px-3 pb-2" />}
       <label className="mx-1 flex h-9 items-center gap-2 rounded bg-[#3e3e3e] px-2.5 text-muted focus-within:ring-2 focus-within:ring-white/80">
         <SearchIcon className="size-4 shrink-0" />
         <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari setlist" aria-label="Cari setlist" className="search-input min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted" />

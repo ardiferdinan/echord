@@ -21,6 +21,7 @@ export type Song = {
   deezer_id?: number | null;
   listen_url?: string; // filled at render time (Deezer), not stored
   version_of?: number | null; // set on an alternative source's chords (status 'version')
+  version_count?: number; // search results: how many other sources this song has
   has_preview?: boolean; // list queries: a stored iTunes preview or a Deezer track to fetch one from
 };
 
@@ -32,10 +33,11 @@ const db = () => {
 // ponytail: ILIKE scan, switch to pg_trgm index when the catalog reaches thousands of songs
 export async function searchSongs(q: string, limit = 30): Promise<Song[]> {
   const t = q.trim();
-  if (!t) return (await db()`select *, (preview_url is not null or deezer_id is not null) as has_preview from songs where status = 'published' order by created_at desc limit ${limit}`) as Song[];
+  if (!t) return (await db()`select *, (preview_url is not null or deezer_id is not null) as has_preview, (select count(*) from songs v where v.version_of = songs.id)::int as version_count from songs where status = 'published' order by created_at desc limit ${limit}`) as Song[];
   const like = `%${t}%`;
   return (await db()`
-    select *, (preview_url is not null or deezer_id is not null) as has_preview from songs where status = 'published' and (title ilike ${like} or artist ilike ${like})
+    select *, (preview_url is not null or deezer_id is not null) as has_preview, (select count(*) from songs v where v.version_of = songs.id)::int as version_count
+    from songs where status = 'published' and (title ilike ${like} or artist ilike ${like})
     order by title limit ${limit}`) as Song[];
 }
 

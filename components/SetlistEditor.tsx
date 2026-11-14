@@ -11,6 +11,11 @@ import { newItem, useHydrated, useSetlists, type Setlist, type SetlistItem } fro
 import { shareSetlist } from "@/app/(main)/setlists/actions";
 import { FlowEditor } from "./FlowEditor";
 import { ConfirmButton } from "./ConfirmButton";
+import { SourceChips, withVersion } from "./AddToSetlist";
+import { sourceName } from "@/lib/sources";
+import type { Version } from "@/lib/db";
+
+type Full = Omit<Song, "versions"> & { versions?: Version[] };
 import { TransposeControl } from "./Controls";
 import { Mosaic } from "./shell/Mosaic";
 import { PlayIcon, TrashIcon } from "./icons";
@@ -136,6 +141,15 @@ function SongCard({ item, n, onChange, onRemove }: { item: SetlistItem; n: numbe
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const [open, setOpen] = useState(() => new URLSearchParams(window.location.search).get("edit") === item.id); // from stage's "Edit lagu ini"; items render client-side only
   const [raw, setRaw] = useState(false); // advanced: the ChordPro text itself
+  // other sites' chords for this song, loaded when the card opens
+  const [full, setFull] = useState<Full | null>(null);
+  useEffect(() => {
+    if (!open || full) return;
+    fetch(`/api/songs/${encodeURIComponent(item.slug)}`).then((r) => (r.ok ? r.json() : null)).then(setFull, () => {});
+  }, [open, full, item.slug]);
+  const sources = full ? [full.source_url ?? null, ...(full.versions ?? []).map((v) => v.source_url ?? null)] : [];
+  const current = item.source === undefined ? 0 : sources.indexOf(item.source); // items saved before sources existed = main
+  const applySource = (s: Song) => onChange({ content: s.content, order: parseSections(s.content).map((x) => x.id), transpose: 0, originalKey: s.original_key, source: s.source_url ?? null });
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState("");
   /** Back to the song as it is in the library: chords & lyrics, full flow, original key (notes stay). */
@@ -145,8 +159,11 @@ function SongCard({ item, n, onChange, onRemove }: { item: SetlistItem; n: numbe
     try {
       const res = await fetch(`/api/songs/${encodeURIComponent(item.slug)}`);
       if (!res.ok) throw new Error("Lagu asli tidak ditemukan");
-      const song = (await res.json()) as Song;
-      onChange({ content: song.content, order: parseSections(song.content).map((s) => s.id), transpose: 0, originalKey: song.original_key, artwork: song.artwork_url ?? item.artwork });
+      const song = (await res.json()) as Full;
+      const all = [song.source_url ?? null, ...(song.versions ?? []).map((v) => v.source_url ?? null)];
+      // back to the original of the source this item uses (JRChord or PsalmNote…)
+      applySource(withVersion(song, Math.max(0, item.source === undefined ? 0 : all.indexOf(item.source))));
+      onChange({ artwork: song.artwork_url ?? item.artwork });
     } catch (e) {
       setResetError((e as Error).message);
     } finally {
@@ -189,6 +206,20 @@ function SongCard({ item, n, onChange, onRemove }: { item: SetlistItem; n: numbe
       {open && (
         <div className="px-3 pb-5 pt-2 sm:pl-[104px]">
           <p className="mb-2 text-xs text-muted">Klik suku kata untuk menaruh chord · ✎ edit lirik · ↑ ↓ atau geser penanda untuk memindah bagian · ⧉ duplikat · ⋯ opsi lain.</p>
+          {sources.length > 1 && (
+            <div className="mb-3 flex flex-wrap items-center gap-1.5 text-xs" role="group" aria-label="Sumber chord">
+              <span className="font-semibold text-muted">Sumber chord:</span>
+              {sources.map((u, i) =>
+                i === current ? (
+                  <span key={i} className="grid h-7 place-items-center rounded-full bg-ink px-3 font-bold text-app" aria-current="true">{sourceName(u)}</span>
+                ) : (
+                  <ConfirmButton key={i} className="h-7 rounded-full bg-white/10 px-3 font-bold text-ink hover:bg-white/20" armedClassName="!bg-ink !text-app" confirmLabel={`Ganti ke ${sourceName(u)}? Editan lagu ini hilang`} onConfirm={() => applySource(withVersion(full!, i))}>
+                    {sourceName(u)}
+                  </ConfirmButton>
+                ),
+              )}
+            </div>
+          )}
           <FlowEditor item={item} onChange={onChange} />
 
           <textarea
@@ -241,6 +272,7 @@ function AddSong({ onAdd }: { onAdd: (s: Song) => void }) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<Song[]>([]);
   const [err, setErr] = useState("");
+  const [choosing, setChoosing] = useState<{ id: number; song?: Full; vi: number } | null>(null); // a song with several sources
   useEffect(() => {
     if (!q.trim()) return;
     const t = setTimeout(async () => {
@@ -252,6 +284,14 @@ function AddSong({ onAdd }: { onAdd: (s: Song) => void }) {
     }, 250);
     return () => clearTimeout(t);
   }, [q]);
+  const add = (s: Song) => (onAdd(s), setQ(""), setChoosing(null));
+  const choose = async (s: Song) => {
+    setChoosing({ id: s.id, vi: 0 });
+    const res = await fetch(`/api/songs/${encodeURIComponent(s.slug)}`);
+    if (!res.ok) return setErr("Lagu gagal dimuat");
+    const song = (await res.json()) as Full;
+    setChoosing((c) => (c?.id === s.id ? { ...c, song } : c));
+  };
 
   return (
     <div className="mt-10 border-t border-line pt-6">
@@ -262,13 +302,27 @@ function AddSong({ onAdd }: { onAdd: (s: Song) => void }) {
         <ul className="mt-3">
           {results.map((s) => (
             <li key={s.id}>
-              <div className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-white/10">
+              <div className="flex flex-wrap items-center gap-3 rounded-md px-2 py-2 hover:bg-white/10">
                 <Mosaic covers={[s.artwork_url]} className="size-10" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{s.title}</span>
-                  <span className="block truncate text-sm text-muted">{s.artist}{s.original_key ? ` · ${s.original_key}` : ""}</span>
+                  <span className="block truncate text-sm text-muted">
+                    {s.artist}{s.original_key ? ` · ${s.original_key}` : ""}
+                    {s.version_count ? ` · ${s.version_count + 1} sumber` : ""}
+                  </span>
                 </span>
-                <button onClick={() => (onAdd(s), setQ(""))} className="btn h-8 px-4 sm:h-8">Tambah</button>
+                {choosing?.id === s.id ? (
+                  choosing.song ? (
+                    <span className="flex flex-wrap items-center gap-2">
+                      <SourceChips song={choosing.song} value={choosing.vi} onChange={(vi) => setChoosing({ ...choosing, vi })} />
+                      <button onClick={() => add(withVersion(choosing.song!, choosing.vi))} className="btn btn-primary h-8 px-4 sm:h-8">Tambah</button>
+                    </span>
+                  ) : (
+                    <span className="text-sm text-muted">Memuat sumber…</span>
+                  )
+                ) : (
+                  <button onClick={() => (s.version_count ? choose(s) : add(s))} className="btn h-8 px-4 sm:h-8">Tambah</button>
+                )}
               </div>
             </li>
           ))}

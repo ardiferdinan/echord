@@ -1,7 +1,8 @@
-import { getSong } from "@/lib/db";
+import { getSong, songVersions } from "@/lib/db";
 
-/** Full song (with ChordPro) for adding to a setlist from a list, the player or a menu. */
+/** Full song (with ChordPro) for adding to a setlist, plus other sources' chords for it (versions). */
 export async function GET(_req: Request, ctx: RouteContext<"/api/songs/[slug]">) {
   const song = await getSong((await ctx.params).slug);
-  return song ? Response.json(song) : Response.json({ error: "Lagu tidak ditemukan" }, { status: 404 });
+  if (!song) return Response.json({ error: "Lagu tidak ditemukan" }, { status: 404 });
+  return Response.json({ ...song, versions: await songVersions(song.id) });
 }
