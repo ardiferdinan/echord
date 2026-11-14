@@ -7,9 +7,10 @@ import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from "@dnd-kit/utilities";
 import { flowCollapsed, flowId, parseSections, transposeKey, transposeSections, type Section } from "@/lib/chordpro";
 import type { Song } from "@/lib/db";
-import { newItem, useHydrated, useSetlists, type Setlist, type SetlistItem } from "@/lib/storage";
+import { newItem, uid, useHydrated, useSetlists, type Setlist, type SetlistItem } from "@/lib/storage";
 import { shareSetlist } from "@/app/(main)/setlists/actions";
 import { FlowEditor } from "./FlowEditor";
+import { MedleyCard, medleyMeta } from "./Medley";
 import { ConfirmButton } from "./ConfirmButton";
 import { SourceChips, withVersion } from "./AddToSetlist";
 import { sourceName } from "@/lib/sources";
@@ -20,7 +21,13 @@ import { TransposeControl } from "./Controls";
 import { Mosaic } from "./shell/Mosaic";
 import { PlayIcon, TrashIcon } from "./icons";
 
+/** The sections to play, in order; a medley is its songs one after another, each under a title row. */
 export function arranged(item: SetlistItem): Section[] {
+  if (item.parts?.length)
+    return item.parts.flatMap((p, k) => {
+      const key = p.originalKey ? transposeKey(p.originalKey, p.transpose) : undefined;
+      return [{ id: `h${k}`, label: p.title, type: "part" as const, lines: [], heading: `${p.title}${key ? ` · Kunci ${key}` : ""}`, key }, ...arranged(p).map((s) => ({ ...s, key }))];
+    });
   const secs = parseSections(item.content);
   const byId = new Map(secs.map((s) => [s.id, s]));
   const key = item.originalKey ? transposeKey(item.originalKey, item.transpose) : undefined;
@@ -52,6 +59,17 @@ export function SetlistEditor({ id }: { id: string }) {
   const update = (fn: (s: Setlist) => Setlist) => setSetlists((all) => all.map((s) => (s.id === id ? { ...fn(s), updatedAt: Date.now() } : s)));
   const updateItem = (itemId: string, patch: Partial<SetlistItem>) =>
     update((s) => ({ ...s, items: s.items.map((it) => (it.id === itemId ? { ...it, ...patch } : it)) }));
+
+  /** Song (or medley) n and the one after it become one medley; the songs keep their own flow and key. */
+  const mergeNext = (n: number) =>
+    update((s) => {
+      const a = s.items[n], b = s.items[n + 1];
+      const songs = (x: SetlistItem) => (x.parts?.length ? x.parts : [{ ...x, notes: undefined }]);
+      const medley: SetlistItem = { id: a.parts?.length ? a.id : uid(), songId: 0, slug: "", artist: null, originalKey: null, content: "", transpose: 0, order: [], notes: a.parts?.length ? a.notes : undefined, ...medleyMeta([...songs(a), ...songs(b)]) };
+      return { ...s, items: [...s.items.slice(0, n), medley, ...s.items.slice(n + 2)] };
+    });
+  /** A medley back into separate songs, in place. */
+  const split = (n: number) => update((s) => ({ ...s, items: s.items.flatMap((x, i) => (i === n ? (x.parts ?? []) : [x])) }));
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id) return;
@@ -119,15 +137,16 @@ export function SetlistEditor({ id }: { id: string }) {
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={setlist.items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
           <ol className="space-y-1">
-            {setlist.items.map((item, n) => (
-              <SongCard
-                key={item.id}
-                n={n + 1}
-                item={item}
-                onChange={(p) => updateItem(item.id, p)}
-                onRemove={() => update((s) => ({ ...s, items: s.items.filter((i) => i.id !== item.id) }))}
-              />
-            ))}
+            {setlist.items.map((item, n) => {
+              const common = {
+                n: n + 1,
+                item,
+                onChange: (p: Partial<SetlistItem>) => updateItem(item.id, p),
+                onRemove: () => update((s) => ({ ...s, items: s.items.filter((i) => i.id !== item.id) })),
+                onMergeNext: n < setlist.items.length - 1 ? () => mergeNext(n) : undefined,
+              };
+              return item.parts?.length ? <MedleyCard key={item.id} {...common} onSplit={() => split(n)} /> : <SongCard key={item.id} {...common} />;
+            })}
           </ol>
         </SortableContext>
       </DndContext>
@@ -137,7 +156,7 @@ export function SetlistEditor({ id }: { id: string }) {
   );
 }
 
-function SongCard({ item, n, onChange, onRemove }: { item: SetlistItem; n: number; onChange: (p: Partial<SetlistItem>) => void; onRemove: () => void }) {
+function SongCard({ item, n, onChange, onRemove, onMergeNext }: { item: SetlistItem; n: number; onChange: (p: Partial<SetlistItem>) => void; onRemove: () => void; onMergeNext?: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const [open, setOpen] = useState(() => new URLSearchParams(window.location.search).get("edit") === item.id); // from stage's "Edit lagu ini"; items render client-side only
   const [raw, setRaw] = useState(false); // advanced: the ChordPro text itself
@@ -242,6 +261,7 @@ function SongCard({ item, n, onChange, onRemove }: { item: SetlistItem; n: numbe
               Reset ke lagu asli
             </ConfirmButton>
             <Link href={`/songs/${item.slug}`} className="btn">Lagu asli</Link>
+            {onMergeNext && <button className="btn" onClick={onMergeNext} title="Lagu ini dan lagu di bawahnya jadi satu medley">Jadikan medley dengan lagu berikutnya</button>}
             <button className="btn" onClick={() => setRaw(!raw)} aria-expanded={raw}>{raw ? "Tutup teks ChordPro" : "Teks ChordPro"}</button>
             <ConfirmButton className="btn ml-auto border-hot/50 text-hot hover:border-hot" armedClassName="!border-hot !bg-hot !text-black" confirmLabel="Ya, hapus dari setlist" onConfirm={onRemove}>
               Hapus dari setlist

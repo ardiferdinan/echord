@@ -240,6 +240,9 @@ export function Stage({ setlist, backHref, printHref, editHref, onTranspose }: {
               <div className="min-w-0">
                 <h1 className="text-[clamp(22px,2.6vw,34px)] font-black leading-tight tracking-[-0.03em]">{item.title}</h1>
                 <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
+                  {item.parts?.length ? (
+                    <span className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold">Medley · {item.parts.length} lagu, kunci diatur di editor</span>
+                  ) : (
                   <span className="inline-flex h-9 items-center rounded-full bg-accent-soft font-bold text-accent" role="group" aria-label="Transpose">
                     <button type="button" onClick={() => transpose(item.transpose - 1)} className="grid h-full w-9 place-items-center rounded-full hover:bg-white/10" aria-label="Turun setengah nada"><MinusIcon className="size-4" /></button>
                     <span className="px-1 tabular-nums" aria-live="polite">
@@ -248,7 +251,8 @@ export function Stage({ setlist, backHref, printHref, editHref, onTranspose }: {
                     </span>
                     <button type="button" onClick={() => transpose(item.transpose + 1)} className="grid h-full w-9 place-items-center rounded-full hover:bg-white/10" aria-label="Naik setengah nada"><PlusIcon className="size-4" /></button>
                   </span>
-                  {item.transpose !== 0 && (
+                  )}
+                  {item.transpose !== 0 && !item.parts?.length && (
                     <button type="button" onClick={() => transpose(0)} className="rounded-full px-2 py-1 text-xs font-semibold hover:bg-white/10 hover:text-ink" title="Kembali ke kunci asli">
                       {item.originalKey ? `asli ${item.originalKey}` : "asli"} · reset
                     </button>

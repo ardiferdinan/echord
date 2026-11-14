@@ -5,7 +5,11 @@ export type ChordAt = { at: number; name: string };
 export type Line = { text: string; chords: ChordAt[] };
 export type SectionType = "verse" | "chorus" | "prechorus" | "bridge" | "part";
 /** collapsed: shown as the part tag + [...] only (a setlist flow entry marked "s3*"). */
-export type Section = { id: string; label: string; type: SectionType; lines: Line[]; collapsed?: boolean };
+export type Section = {
+  id: string; label: string; type: SectionType; lines: Line[]; collapsed?: boolean;
+  heading?: string; // medley: a song title row between songs ("Kumenang · Kunci D"), no lines
+  key?: string; // medley: the key of the song this part belongs to (for chord numbers)
+};
 
 // a setlist flow is a list of section ids; a trailing * marks that occurrence collapsed
 export const flowId = (entry: string) => entry.replace(/\*$/, "");
@@ -341,3 +345,26 @@ export function lineSlots(l: Line): { items: ({ word: LinePiece[] } | { space: n
   items.sort((a, b) => a.at - b.at);
   return { items: items.map((x) => ("word" in x ? { word: x.word } : { space: x.space })), after: l.chords.map((c) => c.at).filter((at) => at >= l.text.length) };
 }
+
+// ---------- medley: which parts of a song to play ----------
+export type Preset = "full" | "chorus" | "vpc";
+export const PRESETS: { id: Preset; label: string }[] = [
+  { id: "full", label: "Full" },
+  { id: "chorus", label: "Chorus saja" },
+  { id: "vpc", label: "Verse → Pre-Chorus → Chorus" },
+];
+/** Section ids for a preset: everything, the chorus(es), or the first verse + pre-chorus + chorus. */
+export function presetOrder(sections: Section[], preset: Preset): string[] {
+  const all = sections.map((s) => s.id);
+  if (preset === "full") return all;
+  if (preset === "chorus") {
+    const ch = sections.filter((s) => s.type === "chorus");
+    return ch.length ? [ch[0].id] : all;
+  }
+  const first = (t: SectionType) => sections.find((s) => s.type === t)?.id;
+  const ids = [first("verse"), first("prechorus"), first("chorus")].filter((x): x is string => !!x);
+  return ids.length ? ids : all;
+}
+/** Which preset an order is, if any ("custom" otherwise). */
+export const presetOf = (sections: Section[], order: string[]): Preset | "custom" =>
+  PRESETS.find((p) => presetOrder(sections, p.id).join() === order.join())?.id ?? "custom";

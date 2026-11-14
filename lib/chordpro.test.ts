@@ -235,3 +235,13 @@ test("line slots cut at chords that sit mid-syllable or on a space", async () =>
   assert.deepEqual(lineSlots(fromChordRow("C     G", "la")).after, [6]);
   assert.ok(lineSlots(fromChordRow("   C", "ku  cinta")).items.some((x) => "space" in x && x.space === 3));
 });
+
+test("medley presets", async () => {
+  const { parseSections, presetOrder, presetOf } = await import("./chordpro");
+  const s = parseSections("{start_of_verse: Verse 1}\na\n{end_of_verse}\n{start_of_verse: Pre-Chorus}\nb\n{end_of_verse}\n{start_of_chorus: Reff}\nc\n{end_of_chorus}\n{start_of_verse: Verse 2}\nd\n{end_of_verse}\n{start_of_bridge: Bridge}\ne\n{end_of_bridge}");
+  assert.deepEqual(presetOrder(s, "chorus"), ["s2"]);
+  assert.deepEqual(presetOrder(s, "vpc"), ["s0", "s1", "s2"]);
+  assert.equal(presetOrder(s, "full").length, 5);
+  assert.equal(presetOf(s, ["s2"]), "chorus");
+  assert.equal(presetOf(s, ["s2", "s2"]), "custom");
+});

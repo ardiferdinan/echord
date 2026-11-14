@@ -107,17 +107,25 @@ export function ChordSheet({ sections, fontSize = 17, interactive = true, number
   const [colors] = useSheetColors();
   return (
     <div style={{ fontSize, color: colors.lyric, ["--sheet-chord" as string]: colors.chord }} className="chord-sheet leading-snug">
-      {sections.map((s, i) => (
+      {sections.map((s, i) =>
+        s.heading ? (
+          // medley: the next song's title and key
+          <h3 key={i} className="mb-4 mt-2 flex items-center gap-[0.6em] border-t border-current/20 pt-[0.6em] text-[1.05em] font-black tracking-[-0.01em] first:mt-0 first:border-0 first:pt-0">
+            <span className="text-[0.75em] font-bold uppercase tracking-[0.12em] opacity-60">Medley</span>
+            {s.heading}
+          </h3>
+        ) : (
         <section key={i} className={`break-inside-avoid ${s.collapsed ? "mb-5" : "mb-8"}`}>
           <div className="mb-3 flex items-center gap-[0.6em]">
             <SectionLabel s={s} />
             {s.collapsed && <span className="font-mono font-bold opacity-70" title="Sama seperti sebelumnya">[...]</span>}
           </div>
           {!s.collapsed && s.lines.map((l, k) => (
-            <SheetLine key={k} line={l} h={interactive ? pop.handlers : undefined} label={label} />
+            <SheetLine key={k} line={l} h={interactive ? pop.handlers : undefined} label={numberKey && s.key ? (c) => toNumber(c, s.key!) : label} />
           ))}
         </section>
-      ))}
+        ),
+      )}
       {pop.node}
     </div>
   );

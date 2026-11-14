@@ -66,6 +66,7 @@ export type SetlistItem = {
   notes?: string;
   artwork?: string | null; // cover for the setlist mosaic (items saved before this field have none)
   source?: string | null; // page the chords came from (JRChord, PsalmNote…); undefined = the song's main source
+  parts?: SetlistItem[]; // a medley: songs played back to back, each with its own parts and key
 };
 export type Setlist = {
   id: string;
