@@ -138,7 +138,7 @@ export function SongForm() {
             <div className="min-h-[28rem] rounded-lg bg-card p-3 sm:p-4">
               {sections.length ? (
                 <>
-                  <p className="mb-2 px-2 text-xs text-muted">Klik baris untuk edit chord & lirik · geser penanda untuk mengubah urutan · klik dua kali penanda untuk ganti nama.</p>
+                  <p className="mb-2 px-2 text-xs text-muted">Klik suku kata untuk menaruh chord · ✎ edit lirik · ↑ ↓ atau geser penanda untuk memindah bagian · ⧉ duplikat · ⋯ opsi lain.</p>
                   <FlowEditor item={{ content: imported.content, order: sections.map((x) => x.id), transpose: 0, originalKey: key || null }} onChange={onVisual} collapsible={false} />
                 </>
               ) : (

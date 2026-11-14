@@ -189,3 +189,6 @@ body {
   .print-page:last-child { break-after: auto; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* chord inputs suggest from a datalist; hide Chrome's dropdown arrow inside the tiny field */
+.chord-input::-webkit-calendar-picker-indicator { display: none !important; }

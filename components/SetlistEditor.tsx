@@ -188,7 +188,7 @@ function SongCard({ item, n, onChange, onRemove }: { item: SetlistItem; n: numbe
 
       {open && (
         <div className="px-3 pb-5 pt-2 sm:pl-[104px]">
-          <p className="mb-2 text-xs text-muted">Geser penanda untuk mengubah alur · klik baris untuk edit chord & lirik · klik dua kali penanda untuk ganti nama.</p>
+          <p className="mb-2 text-xs text-muted">Klik suku kata untuk menaruh chord · ✎ edit lirik · ↑ ↓ atau geser penanda untuk memindah bagian · ⧉ duplikat · ⋯ opsi lain.</p>
           <FlowEditor item={item} onChange={onChange} />
 
           <textarea
