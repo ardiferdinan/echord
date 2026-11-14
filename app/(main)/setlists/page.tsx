@@ -40,7 +40,7 @@ export default function SetlistsPage() {
               <Mosaic covers={s.items.map((i) => i.artwork)} className="aspect-square w-full shadow-lg shadow-black/40" rounded="rounded-md" />
               {s.items.length > 0 && (
                 <Link href={`/setlists/${s.id}/play`} aria-label={`Mulai stage ${s.name}`} className="play-pop absolute bottom-2 right-2 z-10 grid size-12 place-items-center rounded-full bg-brand text-on-brand shadow-lg shadow-black/40 transition hover:scale-[1.06]">
-                  <PlayIcon className="size-5 translate-x-[1px]" />
+                  <PlayIcon className="size-5" />
                 </Link>
               )}
             </div>

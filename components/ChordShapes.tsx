@@ -4,6 +4,7 @@ import type { Section } from "@/lib/chordpro";
 import { suggest, type BandContext } from "@/lib/voicing";
 import { useBandContext } from "@/lib/storage";
 import { GuitarDiagram, PianoDiagram } from "./Diagrams";
+import { BandContextPicker } from "./ChordSheet";
 
 const MODES: { label: string; ctx: Pick<BandContext, "instrument" | "guitarType"> }[] = [
   { label: "Akustik", ctx: { instrument: "guitar", guitarType: "acoustic" } },
@@ -19,7 +20,7 @@ export function ChordShapes({ sections, className = "" }: { sections: Section[];
   const mode = ctx.instrument === "piano" ? "Piano" : ctx.guitarType === "electric" ? "Elektrik" : "Akustik";
   const tip = suggest(chords[0], ctx).tip;
   return (
-    <div className={`rounded-lg bg-card p-4 ${className}`}>
+    <div className={`flex max-h-[calc(100svh-16rem)] flex-col rounded-lg bg-card p-4 ${className}`}>
       <h2 className="font-bold">Bentuk chord</h2>
       <div className="mt-2 flex rounded-full bg-black/40 p-1 text-xs font-bold" role="group" aria-label="Instrumen">
         {MODES.map((m) => (
@@ -28,8 +29,9 @@ export function ChordShapes({ sections, className = "" }: { sections: Section[];
           </button>
         ))}
       </div>
+      <BandContextPicker ctx={ctx} onChange={setCtx} compact bandOnly />
       <p className="mt-2 text-xs leading-relaxed text-muted">{tip}</p>
-      <ul tabIndex={0} aria-label="Diagram chord" className="mt-3 grid max-h-[calc(100svh-22rem)] grid-cols-2 gap-x-2 gap-y-3 overflow-y-auto rounded-md">
+      <ul tabIndex={0} aria-label="Diagram chord" className="mt-3 grid min-h-0 flex-1 grid-cols-2 gap-x-2 gap-y-3 overflow-y-auto rounded-md">
         {chords.map((c) => {
           const s = suggest(c, ctx);
           const v = s.guitar[0];

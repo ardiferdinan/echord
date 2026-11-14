@@ -3,7 +3,8 @@ import type { SVGProps } from "react";
 type P = SVGProps<SVGSVGElement>;
 const base = (p: P) => ({ viewBox: "0 0 24 24", "aria-hidden": true, ...p });
 
-export const PlayIcon = (p: P) => <svg {...base(p)} fill="currentColor"><path d="M7 4.6v14.8a1 1 0 0 0 1.5.9l12-7.4a1 1 0 0 0 0-1.8l-12-7.4A1 1 0 0 0 7 4.6Z" /></svg>;
+// optically centred: the triangle's weight sits left of its box, so the box is nudged a little right of the middle (≈ +5%)
+export const PlayIcon = (p: P) => <svg {...base(p)} fill="currentColor"><path d="M6.3 4.6v14.8a1 1 0 0 0 1.5.9l12-7.4a1 1 0 0 0 0-1.8l-12-7.4a1 1 0 0 0-1.5.9Z" /></svg>;
 export const PauseIcon = (p: P) => <svg {...base(p)} fill="currentColor"><rect x="5.5" y="4" width="4.5" height="16" rx="1.2" /><rect x="14" y="4" width="4.5" height="16" rx="1.2" /></svg>;
 export const HomeIcon = ({ filled, ...p }: P & { filled?: boolean }) => (
   <svg {...base(p)} fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1v-9.5Z" /></svg>
@@ -61,3 +62,7 @@ export const QueueIcon = (p: P) => <svg {...line(p)}><path d="M3 5h12M3 10h12M3 
 export const QueueAddIcon = (p: P) => <svg {...line(p)}><path d="M3 6h12M3 11h12M3 16h8M18 13v8M14 17h8" /></svg>;
 export const UserIcon = (p: P) => <svg {...line(p)}><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>;
 export const LinkIcon = (p: P) => <svg {...line(p)}><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>;
+export const CloseIcon = (p: P) => <svg {...line(p)} strokeWidth={2.2}><path d="M6 6l12 12M18 6 6 18" /></svg>;
+export const ExpandIcon = (p: P) => <svg {...line(p)}><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>;
+export const ArrowRightIcon = (p: P) => <svg {...line(p)} strokeWidth={2.4}><path d="M5 12h14M13 6l6 6-6 6" /></svg>;
+export const MinusIcon = (p: P) => <svg {...line(p)} strokeWidth={2.4}><path d="M5 12h14" /></svg>;

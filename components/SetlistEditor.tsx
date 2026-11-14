@@ -89,7 +89,7 @@ export function SetlistEditor({ id }: { id: string }) {
           aria-label="Mulai stage mode"
           className={`grid size-14 place-items-center rounded-full bg-brand text-on-brand shadow-lg shadow-black/40 transition ${setlist.items.length ? "hover:scale-[1.06]" : "pointer-events-none opacity-40"}`}
         >
-          <PlayIcon className="size-6 translate-x-[1px]" />
+          <PlayIcon className="size-6" />
         </Link>
         <ShareButton
           setlist={setlist}

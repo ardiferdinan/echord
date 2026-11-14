@@ -26,7 +26,7 @@ export function PlayButton({ track, queue, size = "md", className = "" }: { trac
       data-active={on}
       className={`grid shrink-0 place-items-center rounded-full bg-brand text-on-brand shadow-lg shadow-black/40 transition hover:scale-[1.06] hover:brightness-110 active:scale-95 ${dim} ${className}`}
     >
-      {on ? <PauseIcon /> : <PlayIcon className="translate-x-[1px]" />}
+      {on ? <PauseIcon /> : <PlayIcon />}
     </button>
   );
 }

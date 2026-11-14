@@ -43,7 +43,7 @@ export function Popover({
   }, [open]);
   useEffect(() => {
     if (!open) return;
-    const off = (e: Event) => !panel.current?.contains(e.target as Node) && panel.current?.hidePopover();
+    const off = (e: Event) => !(e.target instanceof Node && panel.current?.contains(e.target)) && panel.current?.hidePopover(); // resize targets window
     addEventListener("scroll", off, true);
     addEventListener("resize", off);
     return () => {

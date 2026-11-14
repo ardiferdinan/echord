@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useLayoutEffect, useRef } from "react";
 import { transposeKey } from "@/lib/chordpro";
+import { fitColumns } from "@/lib/fit";
 import { useHydrated, useSetlists, type SetlistItem } from "@/lib/storage";
 import { ChordSheet } from "@/components/ChordSheet";
 import { arranged } from "@/components/SetlistEditor";
@@ -40,28 +41,17 @@ function Page({ item, n, total, setName }: { item: SetlistItem; n: number; total
   // fit: one column if it fits, else two columns, then smaller text until nothing spills past the page
   useLayoutEffect(() => {
     const el = body.current;
-    if (!el) return;
-    const sheet = el.firstElementChild as HTMLElement;
-    let font = BASE;
-    // "" = not a multi-column box at all (with column-count 1 the overflow would spill into extra columns sideways)
-    const set = (cols: number) => {
-      el.style.columnCount = cols > 1 ? String(cols) : "";
-      sheet.style.fontSize = `${font}px`;
-    };
-    const spills = () => el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1;
-    set(1);
-    if (!spills()) return;
-    set(2);
-    while (spills() && font > 9) {
-      font -= 0.5;
-      set(2);
-    }
+    if (el) fitColumns(el, el.firstElementChild as HTMLElement, { start: BASE });
   }, [item]);
 
   return (
     <article className="print-page mx-auto mt-8 flex flex-col bg-white text-[#111] shadow-2xl">
-      <header className="mb-[5mm] flex items-end justify-between gap-4 border-b-2 border-[#111] pb-[3mm]">
-        <div className="min-w-0">
+      <header className="mb-[5mm] flex items-end gap-[4mm] border-b-2 border-[#111] pb-[3mm]">
+        {item.artwork && (
+          // eslint-disable-next-line @next/next/no-img-element -- plain img prints reliably (no lazy loading)
+          <img src={item.artwork} alt="" className="size-[22mm] shrink-0 rounded-[2mm] object-cover" />
+        )}
+        <div className="min-w-0 flex-1">
           <h1 className="text-[22px] font-black leading-tight tracking-[-0.02em]">{item.title}</h1>
           <p className="mt-1 text-[12px] text-[#444]">
             {item.artist}
@@ -73,7 +63,7 @@ function Page({ item, n, total, setName }: { item: SetlistItem; n: number; total
           <p className="text-[10px] text-[#666]">{setName} · {n}/{total}</p>
         </div>
       </header>
-      <div ref={body} className="print-body min-h-0 flex-1 overflow-hidden">
+      <div ref={body} className="print-body flow min-h-0 flex-1 overflow-hidden">
         <ChordSheet sections={sections} fontSize={BASE} interactive={false} />
       </div>
     </article>

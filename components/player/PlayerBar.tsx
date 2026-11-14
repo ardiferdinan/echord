@@ -1,6 +1,8 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Suspense } from "react";
 import { AddToSetlist } from "../AddToSetlist";
 import { Popover } from "../Popover";
 import { ChordIcon, NextIcon, NoteIcon, PauseIcon, PlayIcon, PrevIcon, QueueIcon, RepeatIcon, ShuffleIcon, VolumeIcon } from "../icons";
@@ -55,7 +57,7 @@ export function PlayerBar() {
             aria-label={p.playing ? "Jeda" : "Putar"}
             className="grid size-10 place-items-center rounded-full bg-ink text-app transition hover:scale-[1.06] active:scale-95 disabled:opacity-40 disabled:hover:scale-100 lg:size-8"
           >
-            {p.playing ? <PauseIcon className="size-4" /> : <PlayIcon className="size-4 translate-x-[1px]" />}
+            {p.playing ? <PauseIcon className="size-4" /> : <PlayIcon className="size-4" />}
           </button>
           <button type="button" onClick={p.next} disabled={!t || (p.queue.length < 2 && p.repeat === "off")} aria-label="Berikutnya" title="Berikutnya" className={`${icon} hidden lg:grid`}>
             <NextIcon className="size-4" />
@@ -93,9 +95,9 @@ export function PlayerBar() {
       {/* chords · queue · volume */}
       <div className="hidden w-[30%] items-center justify-end gap-1 pr-2 text-muted lg:flex">
         {t && (
-          <Link href={`/songs/${t.slug}`} aria-label="Buka chord lagu ini" title="Buka chord" className={icon}>
-            <ChordIcon className="size-[18px]" />
-          </Link>
+          <Suspense fallback={<ChordButton slug={t.slug} here={false} />}>
+            <LiveChordButton slug={t.slug} />
+          </Suspense>
         )}
         <Popover label="Antrean" buttonClass={`${icon} data-[open]:!text-brand`} button={<QueueIcon className="size-[18px]" />} panelClass="w-80">
           {() => <Queue />}
@@ -121,6 +123,30 @@ export function PlayerBar() {
         <span className="block h-full bg-ink" style={{ width: pct }} />
       </span>
     </section>
+  );
+}
+
+function LiveChordButton({ slug }: { slug: string }) {
+  return <ChordButton slug={slug} here={usePathname() === `/songs/${slug}`} />;
+}
+
+/** Like a lyrics button: opens the playing song at its chord sheet; green when that page is open, then it just scrolls there. */
+function ChordButton({ slug, here }: { slug: string; here: boolean }) {
+  return (
+    <Link
+      href={`/songs/${slug}#chords`}
+      onClick={(e) => {
+        if (!here) return;
+        e.preventDefault();
+        document.getElementById("chords")?.scrollIntoView({ behavior: "smooth" });
+      }}
+      aria-current={here ? "page" : undefined}
+      aria-label="Buka chord lagu ini"
+      title="Buka chord"
+      className={`${icon} ${here ? on : ""}`}
+    >
+      <ChordIcon className="size-[18px]" />
+    </Link>
   );
 }
 

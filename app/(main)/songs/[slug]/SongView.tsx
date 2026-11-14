@@ -10,6 +10,7 @@ import { FontControl, NumbersControl, TransposeControl } from "@/components/Cont
 import { PlayButton } from "@/components/player/PlayButton";
 import { AddToSetlist } from "@/components/AddToSetlist";
 import { ChordShapes } from "@/components/ChordShapes";
+import { SheetColorButton } from "@/components/SheetColors";
 import { usePlayer } from "@/components/player/PlayerProvider";
 import { NoteIcon } from "@/components/icons";
 import { artistHref } from "@/components/library";
@@ -24,6 +25,10 @@ export function SongView({ song }: { song: Song }) {
   const playable = !!(song.preview_url || song.deezer_id);
   // picking a song starts its preview in the player bar
   const { cue } = usePlayer();
+  // opened from the player's chord button (#chords): the main panel scrolls, not the window, so do it here
+  useEffect(() => {
+    if (location.hash === "#chords") document.getElementById("chords")?.scrollIntoView();
+  }, [song.id]);
   useEffect(() => {
     if (playable) cue({ id: song.id, slug: song.slug, title: song.title, artist: song.artist, artwork_url: song.artwork_url });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per song; cue ignores the song already loaded
@@ -73,6 +78,7 @@ export function SongView({ song }: { song: Song }) {
         <TransposeControl value={transpose} onChange={setTranspose} originalKey={song.original_key} />
         <NumbersControl value={numbers} onChange={setNumbers} />
         <FontControl value={font} onChange={setFont} />
+        <SheetColorButton className="bg-surface-2" />
         {song.apple_url && (
           <a href={song.apple_url} target="_blank" rel="noopener noreferrer" className="ml-auto shrink-0 text-sm font-bold text-muted hover:text-ink hover:underline">
             Apple Music ↗
@@ -82,7 +88,7 @@ export function SongView({ song }: { song: Song }) {
 
       <div className="mt-4 grid gap-10 xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0">
-          <details className="group mb-6 w-fit">
+          <details className="group mb-6 w-fit xl:hidden">
             <summary className="flex h-9 cursor-pointer list-none items-center gap-2 rounded-full bg-surface-2 px-4 text-sm font-semibold text-muted hover:text-ink [&::-webkit-details-marker]:hidden">
               Pengaturan band <span className="transition group-open:rotate-180" aria-hidden>▾</span>
             </summary>
@@ -91,6 +97,7 @@ export function SongView({ song }: { song: Song }) {
               <p className="mt-2 text-xs text-muted">Dipakai untuk saran voicing saat kamu membuka chord.</p>
             </div>
           </details>
+          <div id="chords" className="scroll-mt-40" />
           <ChordSheet sections={sections} fontSize={font} numberKey={numbers ? target || detectKey(sections) : undefined} />
         </div>
         <aside className="hidden xl:block" aria-label="Bentuk chord"><ChordShapes sections={sections} className="sticky top-40" /></aside>

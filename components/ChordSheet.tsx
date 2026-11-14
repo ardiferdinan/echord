@@ -4,6 +4,7 @@ import { toNumber, type Line, type Section, type SectionType } from "@/lib/chord
 import { suggest, type BandContext } from "@/lib/voicing";
 import { useBandContext, useLocal } from "@/lib/storage";
 import { GuitarDiagram, PianoDiagram } from "./Diagrams";
+import { ChevronIcon, CloseIcon } from "./icons";
 
 export const SECTION_COLOR: Record<SectionType, string> = {
   verse: "var(--verse)", chorus: "var(--chorus)", bridge: "var(--bridge)", prechorus: "var(--prechorus)", part: "var(--part)",
@@ -51,23 +52,53 @@ function SheetLine({ line, h, label }: { line: Line; h?: ChordHandlers; label: (
   );
 }
 
-/** Part marker: a tinted tag with a colored edge, one hue per part type (verse, chorus, bridge…). */
+// Bright, solid tags so each part is recognised at a glance (and remembered by color)
+export const TAGS = [
+  { key: "verse", name: "Verse", re: /verse|bait|ayat/i, bg: "#4d9fff" },
+  { key: "prechorus", name: "Pre-chorus", re: /pre.?(chorus|reff)/i, bg: "#ff9f1c" },
+  { key: "chorus", name: "Chorus", re: /chorus|reff|refrain/i, bg: "#1ed760" },
+  { key: "bridge", name: "Bridge", re: /bridge|jembatan/i, bg: "#c77dff" },
+  { key: "intro", name: "Intro / outro", re: /intro|outro|ending|coda/i, bg: "#2ee6f0" },
+  { key: "interlude", name: "Interlude", re: /interlude|instrumen|solo|musik/i, bg: "#ffd23f" },
+  { key: "vamp", name: "Vamp / tag", re: /vamp|tag|ad.?lib/i, bg: "#ff5ca8" },
+] as const;
+export type TagKey = (typeof TAGS)[number]["key"];
+// pre-chorus before chorus: "Pre-chorus" contains "chorus"
+const MATCH_ORDER: TagKey[] = ["prechorus", "chorus", "bridge", "intro", "interlude", "vamp", "verse"];
+const BY_TYPE: Record<SectionType, TagKey | null> = { verse: "verse", chorus: "chorus", bridge: "bridge", prechorus: "prechorus", part: null };
+
+export type SheetColors = { chord: string; lyric: string; tags: "multi" | "single"; tag: string; tagColors: Partial<Record<TagKey, string>> };
+export const DEFAULT_COLORS: SheetColors = { chord: "#1ed760", lyric: "#ffffff", tags: "multi", tag: "#1ed760", tagColors: {} };
+/** Chord, lyric and part-tag colors, chosen once and used on every chord sheet (older saves lack the tag fields). */
+export function useSheetColors() {
+  const [saved, set] = useLocal<Partial<SheetColors>>("echord:sheet-colors", DEFAULT_COLORS);
+  return [{ ...DEFAULT_COLORS, ...saved }, set] as const;
+}
+
+export const tagKey = (s: Pick<Section, "label" | "type">): TagKey | null => MATCH_ORDER.find((k) => TAGS.find((t) => t.key === k)!.re.test(s.label)) ?? BY_TYPE[s.type];
+export const tagDefault = (k: TagKey) => TAGS.find((t) => t.key === k)!.bg;
+export function tagColor(s: Pick<Section, "label" | "type">, c: SheetColors) {
+  if (c.tags === "single") return c.tag;
+  const k = tagKey(s);
+  return k ? (c.tagColors[k] ?? tagDefault(k)) : "#e0e0e0";
+}
+/** Black or white text, whichever reads better on the tag color. */
+export function inkOn(hex: string) {
+  const n = parseInt(hex.slice(1), 16), [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255].map((v) => ((v /= 255) <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.18 ? "#000" : "#fff";
+}
+
+/** Part marker: a solid tag in the part's color (or the one color picked for all). */
 export function SectionLabel({ s }: { s: Pick<Section, "label" | "type"> }) {
-  const c = SECTION_COLOR[s.type];
+  const [colors] = useSheetColors();
+  const bg = tagColor(s, colors);
   return (
-    <span
-      className="section-tag inline-flex items-center rounded-[5px] py-[0.3em] pl-[0.7em] pr-[0.75em] text-[13px] font-bold uppercase leading-none tracking-[0.08em]"
-      style={{ color: c, background: `color-mix(in srgb, ${c} 16%, transparent)`, boxShadow: `inset 3px 0 0 ${c}` }}
-    >
+    <span className="section-tag inline-flex items-center rounded-[5px] px-[0.65em] py-[0.35em] text-[13px] font-extrabold uppercase leading-none tracking-[0.08em]" style={{ background: bg, color: inkOn(bg) }}>
       {s.label}
     </span>
   );
 }
 
-export type SheetColors = { chord: string; lyric: string };
-export const DEFAULT_COLORS: SheetColors = { chord: "#1ed760", lyric: "#ffffff" };
-/** Chord and lyric colors, chosen once and used on every chord sheet. */
-export const useSheetColors = () => useLocal<SheetColors>("echord:sheet-colors", DEFAULT_COLORS);
 
 /** numberKey: show chords as numbers of that key (C -> 1, Em -> 3m); hover still shows the real chord. */
 export function ChordSheet({ sections, fontSize = 17, interactive = true, numberKey }: { sections: Section[]; fontSize?: number; interactive?: boolean; numberKey?: string }) {
@@ -170,18 +201,18 @@ function ChordPopover({ chord, rect, onEnter, onLeave, onClose }: { chord: strin
             </button>
           ))}
         </div>
-        <button onClick={onClose} aria-label="Tutup" className="btn-icon -mr-2 size-9 text-muted hover:text-ink sm:size-9">✕</button>
+        <button onClick={onClose} aria-label="Tutup" className="btn-icon -mr-2 size-9 text-muted hover:text-ink sm:size-9"><CloseIcon className="size-4" /></button>
       </div>
 
       {ctx.instrument === "guitar" ? (
         v ? (
           <div className="flex items-center gap-2">
-            <button className="btn-icon bg-black/30" disabled={idx === 0} onClick={() => setIdx(idx - 1)} aria-label="Voicing sebelumnya">‹</button>
+            <button className="btn-icon bg-black/30" disabled={idx === 0} onClick={() => setIdx(idx - 1)} aria-label="Voicing sebelumnya"><ChevronIcon className="size-4" /></button>
             <div className="flex flex-1 flex-col items-center">
               <GuitarDiagram v={v} />
               <span className="text-xs text-muted">{v.tag ?? `Posisi ${Math.min(idx, s.guitar.length - 1) + 1}`} · {Math.min(idx, s.guitar.length - 1) + 1}/{s.guitar.length}</span>
             </div>
-            <button className="btn-icon bg-black/30" disabled={idx >= s.guitar.length - 1} onClick={() => setIdx(idx + 1)} aria-label="Voicing berikutnya">›</button>
+            <button className="btn-icon bg-black/30" disabled={idx >= s.guitar.length - 1} onClick={() => setIdx(idx + 1)} aria-label="Voicing berikutnya"><ChevronIcon dir="right" className="size-4" /></button>
           </div>
         ) : (
           <p className="py-6 text-center text-sm text-muted">Diagram untuk {chord} belum tersedia.</p>
@@ -203,8 +234,9 @@ function ChordPopover({ chord, rect, onEnter, onLeave, onClose }: { chord: strin
   );
 }
 
-export function BandContextPicker({ ctx, onChange, compact }: { ctx: BandContext; onChange: (c: BandContext) => void; compact?: boolean }) {
-  const chip = (on: boolean) => `h-9 rounded-full px-3.5 text-sm font-semibold transition ${on ? "bg-ink text-app" : "bg-surface-2 text-ink hover:bg-[#333]"}`;
+/** bandOnly: just who else plays (the instrument is picked elsewhere). */
+export function BandContextPicker({ ctx, onChange, compact, bandOnly }: { ctx: BandContext; onChange: (c: BandContext) => void; compact?: boolean; bandOnly?: boolean }) {
+  const chip = (on: boolean) => `${compact ? "h-7 px-3 text-xs" : "h-9 px-3.5 text-sm"} rounded-full font-semibold transition ${on ? "bg-ink text-app" : "bg-surface-2 text-ink hover:bg-[#333]"}`;
   return (
     <div className={`flex flex-wrap items-center gap-1.5 ${compact ? "mt-2" : ""}`}>
       {!compact && (
@@ -216,7 +248,7 @@ export function BandContextPicker({ ctx, onChange, compact }: { ctx: BandContext
           ))}
         </div>
       )}
-      {ctx.instrument === "guitar" && (
+      {ctx.instrument === "guitar" && !bandOnly && (
         <button className={chip(ctx.guitarType === "electric")} onClick={() => onChange({ ...ctx, guitarType: ctx.guitarType === "electric" ? "acoustic" : "electric" })}>
           {ctx.guitarType === "electric" ? "Elektrik" : "Akustik"}
         </button>
