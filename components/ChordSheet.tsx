@@ -108,11 +108,12 @@ export function ChordSheet({ sections, fontSize = 17, interactive = true, number
   return (
     <div style={{ fontSize, color: colors.lyric, ["--sheet-chord" as string]: colors.chord }} className="chord-sheet leading-snug">
       {sections.map((s, i) => (
-        <section key={i} className="mb-8 break-inside-avoid">
-          <div className="mb-3">
+        <section key={i} className={`break-inside-avoid ${s.collapsed ? "mb-5" : "mb-8"}`}>
+          <div className="mb-3 flex items-center gap-[0.6em]">
             <SectionLabel s={s} />
+            {s.collapsed && <span className="font-mono font-bold opacity-70" title="Sama seperti sebelumnya">[...]</span>}
           </div>
-          {s.lines.map((l, k) => (
+          {!s.collapsed && s.lines.map((l, k) => (
             <SheetLine key={k} line={l} h={interactive ? pop.handlers : undefined} label={label} />
           ))}
         </section>

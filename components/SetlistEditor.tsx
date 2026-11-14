@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { parseSections, transposeKey, transposeSections, type Section } from "@/lib/chordpro";
+import { flowCollapsed, flowId, parseSections, transposeKey, transposeSections, type Section } from "@/lib/chordpro";
 import type { Song } from "@/lib/db";
 import { newItem, useHydrated, useSetlists, type Setlist, type SetlistItem } from "@/lib/storage";
 import { shareSetlist } from "@/app/(main)/setlists/actions";
@@ -18,7 +18,8 @@ export function arranged(item: SetlistItem): Section[] {
   const secs = parseSections(item.content);
   const byId = new Map(secs.map((s) => [s.id, s]));
   const key = item.originalKey ? transposeKey(item.originalKey, item.transpose) : undefined;
-  return transposeSections(item.order.map((id) => byId.get(id)).filter((s): s is Section => !!s), item.transpose, key);
+  const flow = item.order.flatMap((e) => { const s = byId.get(flowId(e)); return s ? [{ ...s, collapsed: flowCollapsed(e) }] : []; });
+  return transposeSections(flow, item.transpose, key);
 }
 
 function useDnd() {
@@ -156,7 +157,7 @@ function SongCard({ item, n, onChange, onRemove }: { item: SetlistItem; n: numbe
         <button className="min-w-0 flex-1 text-left" onClick={() => setOpen(!open)} aria-expanded={open}>
           <span className="block truncate font-semibold">{item.title}</span>
           <span className="block truncate text-xs text-muted">
-            {item.order.map((id) => byId.get(id)?.label).filter(Boolean).join(" → ") || "Belum ada section"}
+            {item.order.map((e) => byId.get(flowId(e))?.label).filter(Boolean).join(" → ") || "Belum ada section"}
           </span>
         </button>
         <TransposeControl value={item.transpose} onChange={(t) => onChange({ transpose: t })} originalKey={item.originalKey} />

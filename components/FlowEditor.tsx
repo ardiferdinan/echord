@@ -3,22 +3,20 @@ import { useMemo, useState } from "react";
 import { DndContext, closestCenter, type DragEndEvent, PointerSensor, KeyboardSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { fromChordRow, parseSections, serialize, toChordRow, transposeChord, transposeKey, transposeSections, typeOfLabel, type Line, type Section } from "@/lib/chordpro";
+import { flowCollapsed, flowId, fromChordRow, parseSections, serialize, toChordRow, transposeChord, transposeKey, transposeSections, typeOfLabel, type Line, type Section } from "@/lib/chordpro";
 import type { SetlistItem } from "@/lib/storage";
 import { SectionLabel, useSheetColors } from "./ChordSheet";
 import { CloseIcon, MinusIcon, PlusIcon } from "./icons";
 
-type Group = { id: string; count: number; start: number; seen: boolean };
+type Group = { id: string; count: number; start: number; collapsed: boolean };
 
-/** Runs of the same part in the flow: Interlude, Interlude -> one row "Interlude 2X". seen = shown earlier in the song. */
+/** Runs of the same part in the flow: Interlude, Interlude -> one row "Interlude 2X". collapsed = shown as the tag + [...]. */
 function groupsOf(order: string[]): Group[] {
   const out: Group[] = [];
-  const shown = new Set<string>();
-  order.forEach((id, i) => {
-    const last = out.at(-1);
-    if (last && last.id === id) last.count++;
-    else out.push({ id, count: 1, start: i, seen: shown.has(id) });
-    shown.add(id);
+  order.forEach((e, i) => {
+    const id = flowId(e), last = out.at(-1);
+    if (last && last.id === id && last.collapsed === flowCollapsed(e)) last.count++;
+    else out.push({ id, count: 1, start: i, collapsed: flowCollapsed(e) });
   });
   return out;
 }
@@ -36,12 +34,11 @@ export function FlowEditor({ item, onChange }: { item: SetlistItem; onChange: (p
   const byId = new Map(shown.map((s, i) => [s.id, i]));
   const groups = groupsOf(item.order).filter((g) => byId.has(g.id));
   const keys = groups.map((g) => `${g.start}:${g.id}`);
-  const [open, setOpen] = useState<Set<string>>(new Set()); // [...] rows expanded
   const [colors] = useSheetColors();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
-  const setOrder = (gs: Group[]) => onChange({ order: gs.flatMap((g) => Array(g.count).fill(g.id)) });
-  const setGroup = (i: number, count: number) => setOrder(groups.map((g, k) => (k === i ? { ...g, count } : g)).filter((g) => g.count > 0));
+  const setOrder = (gs: Group[]) => onChange({ order: gs.flatMap((g) => Array(g.count).fill(g.id + (g.collapsed ? "*" : ""))) });
+  const setGroup = (i: number, p: Partial<Group>) => setOrder(groups.map((g, k) => (k === i ? { ...g, ...p } : g)).filter((g) => g.count > 0));
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id) return;
     setOrder(arrayMove(groups, keys.indexOf(String(active.id)), keys.indexOf(String(over.id))));
@@ -66,16 +63,14 @@ export function FlowEditor({ item, onChange }: { item: SetlistItem; onChange: (p
           <ol className="space-y-1">
             {groups.map((g, i) => {
               const si = byId.get(g.id)!;
-              const expanded = !g.seen || open.has(keys[i]);
               return (
                 <Part
                   key={keys[i]}
                   sortId={keys[i]}
                   s={shown[si]}
                   group={g}
-                  expanded={expanded}
-                  onToggle={() => setOpen((o) => new Set(o.has(keys[i]) ? [...o].filter((k) => k !== keys[i]) : [...o, keys[i]]))}
-                  onCount={(n) => setGroup(i, n)}
+                  onToggle={() => setGroup(i, { collapsed: !g.collapsed })}
+                  onCount={(n) => setGroup(i, { count: n })}
                   onSave={(next) => saveSection(si, next)}
                 />
               );
@@ -87,7 +82,10 @@ export function FlowEditor({ item, onChange }: { item: SetlistItem; onChange: (p
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <select
           value=""
-          onChange={(e) => e.target.value && onChange({ order: [...item.order, e.target.value] })}
+          onChange={(e) => {
+            const id = e.target.value;
+            if (id) onChange({ order: [...item.order, item.order.some((x) => flowId(x) === id) ? id + "*" : id] });
+          }}
           className="h-9 rounded-full bg-surface-2 px-4 text-sm font-semibold text-muted"
           aria-label="Tambah bagian ke alur"
         >
@@ -102,9 +100,10 @@ export function FlowEditor({ item, onChange }: { item: SetlistItem; onChange: (p
   );
 }
 
-function Part({ sortId, s, group, expanded, onToggle, onCount, onSave }: {
-  sortId: string; s: Section; group: Group; expanded: boolean; onToggle: () => void; onCount: (n: number) => void; onSave: (s: Section) => void;
+function Part({ sortId, s, group, onToggle, onCount, onSave }: {
+  sortId: string; s: Section; group: Group; onToggle: () => void; onCount: (n: number) => void; onSave: (s: Section) => void;
 }) {
+  const expanded = !group.collapsed;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: sortId });
   const [editing, setEditing] = useState<number | null>(null);
   const [naming, setNaming] = useState(false);
@@ -128,11 +127,16 @@ function Part({ sortId, s, group, expanded, onToggle, onCount, onSave }: {
           </button>
         )}
         {group.count > 1 && <span className="grid h-7 min-w-7 place-items-center rounded-full bg-[#2b3a8c] px-1.5 text-xs font-black text-white" aria-label={`diulang ${group.count} kali`}>{group.count}X</span>}
-        {group.seen && (
-          <button type="button" onClick={onToggle} className="rounded px-1.5 font-mono text-sm font-bold text-muted hover:bg-white/10 hover:text-ink" aria-expanded={expanded} title={expanded ? "Sembunyikan (sudah tampil di atas)" : "Tampilkan isinya (sama dengan di atas)"}>
-            [...]
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-pressed={group.collapsed}
+          className={`rounded px-1.5 font-mono text-sm font-bold transition ${group.collapsed ? "text-ink hover:bg-white/10" : "text-muted/60 hover:bg-white/10 hover:text-ink"}`}
+          title={group.collapsed ? "Diciutkan: di stage & PDF hanya penanda + [...]. Klik untuk tampilkan isinya." : "Ciutkan jadi [...] (mis. bagian yang sudah dinyanyikan sebelumnya)"}
+          aria-label={group.collapsed ? `Tampilkan isi ${s.label}` : `Ciutkan ${s.label} jadi [...]`}
+        >
+          [...]
+        </button>
         <span className="ml-auto flex items-center opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100">
           <button type="button" className={tool} onClick={() => onCount(group.count - 1)} disabled={group.count < 2} aria-label={`Kurangi ulangan ${s.label}`} title="Kurangi ulangan"><MinusIcon className="size-4" /></button>
           <button type="button" className={tool} onClick={() => onCount(group.count + 1)} aria-label={`Ulangi ${s.label} sekali lagi`} title="Ulangi sekali lagi"><PlusIcon className="size-4" /></button>

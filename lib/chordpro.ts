@@ -4,7 +4,12 @@
 export type ChordAt = { at: number; name: string };
 export type Line = { text: string; chords: ChordAt[] };
 export type SectionType = "verse" | "chorus" | "prechorus" | "bridge" | "part";
-export type Section = { id: string; label: string; type: SectionType; lines: Line[] };
+/** collapsed: shown as the part tag + [...] only (a setlist flow entry marked "s3*"). */
+export type Section = { id: string; label: string; type: SectionType; lines: Line[]; collapsed?: boolean };
+
+// a setlist flow is a list of section ids; a trailing * marks that occurrence collapsed
+export const flowId = (entry: string) => entry.replace(/\*$/, "");
+export const flowCollapsed = (entry: string) => entry.endsWith("*");
 
 // ---------- chord names & transpose ----------
 const SHARP = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
