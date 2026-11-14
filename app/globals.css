@@ -32,11 +32,11 @@
   --on-dark: var(--app);
   --glass: rgb(18 18 18 / 0.92);
 
-  --verse: var(--muted);
+  --verse: #8ab4f8;
   --chorus: var(--green);
-  --prechorus: #ffffff;
-  --bridge: #ffffff;
-  --part: var(--muted);
+  --prechorus: #ffb86b;
+  --bridge: #c792ea;
+  --part: #b3b3b3;
 
   --ease: cubic-bezier(0.3, 0, 0, 1);
 }
@@ -171,3 +171,21 @@ body {
 .range:hover::-webkit-slider-thumb, .range:focus-visible::-webkit-slider-thumb { opacity: 1; }
 .range:hover::-moz-range-thumb, .range:focus-visible::-moz-range-thumb { opacity: 1; }
 .range:disabled { cursor: default; opacity: 0.5; }
+
+/* ---------- print: setlist sheets (app/(stage)/setlists/[id]/print) ---------- */
+.print-page { width: 210mm; height: 297mm; padding: 12mm; }
+.print-body { column-gap: 8mm; column-fill: auto; column-rule: 1px solid #ddd; }
+.print-page .chord-sheet { color: #111 !important; --sheet-chord: #0b6b30 !important; }
+.print-page .chord-sheet section { margin-bottom: 0.85em; break-inside: auto; }
+/* a part may continue in the next column, but a line never splits and a part tag stays with its first line */
+.print-page .chord-sheet section > div { break-inside: avoid; }
+.print-page .chord-sheet section > div:first-child { break-after: avoid; margin-bottom: 0.4em; }
+.print-page .section-tag { color: #111 !important; font-size: 0.72em; }
+@page { size: A4; margin: 0; }
+@media print {
+  html, body, .print-root, #content { background: #fff !important; min-height: 0 !important; padding: 0 !important; }
+  .print-hide { display: none !important; }
+  .print-page { margin: 0 !important; box-shadow: none !important; break-after: page; }
+  .print-page:last-child { break-after: auto; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

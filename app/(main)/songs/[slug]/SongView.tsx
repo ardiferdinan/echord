@@ -2,15 +2,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState, ViewTransition } from "react";
-import { detectKey, parseSections, transposeKey, transposeSections, type Section } from "@/lib/chordpro";
+import { detectKey, parseSections, transposeKey, transposeSections } from "@/lib/chordpro";
 import type { Song } from "@/lib/db";
-import { suggest } from "@/lib/voicing";
 import { useBandContext, useLocal } from "@/lib/storage";
 import { BandContextPicker, ChordSheet } from "@/components/ChordSheet";
 import { FontControl, NumbersControl, TransposeControl } from "@/components/Controls";
-import { GuitarDiagram, PianoDiagram } from "@/components/Diagrams";
 import { PlayButton } from "@/components/player/PlayButton";
 import { AddToSetlist } from "@/components/AddToSetlist";
+import { ChordShapes } from "@/components/ChordShapes";
 import { usePlayer } from "@/components/player/PlayerProvider";
 import { NoteIcon } from "@/components/icons";
 import { artistHref } from "@/components/library";
@@ -94,42 +93,10 @@ export function SongView({ song }: { song: Song }) {
           </details>
           <ChordSheet sections={sections} fontSize={font} numberKey={numbers ? target || detectKey(sections) : undefined} />
         </div>
-        <ChordRail sections={sections} />
+        <aside className="hidden xl:block" aria-label="Bentuk chord"><ChordShapes sections={sections} className="sticky top-40" /></aside>
       </div>
     </article>
   );
 }
 
-/** Desktop rail: every chord in the song (in the current key) with its first voicing. */
-function ChordRail({ sections }: { sections: Section[] }) {
-  const [ctx] = useBandContext();
-  const chords = useMemo(() => [...new Set(sections.flatMap((s) => s.lines.flatMap((l) => l.chords.map((c) => c.name))))].slice(0, 16), [sections]);
-  if (!chords.length) return null;
-  return (
-    <aside className="hidden xl:block" aria-label="Chord di lagu ini">
-      <div className="sticky top-40 rounded-lg bg-card p-4">
-        <h2 className="font-bold">Chord di lagu ini</h2>
-        <p className="text-xs text-muted">{ctx.instrument === "guitar" ? "Gitar" : "Piano"} · posisi pertama</p>
-        <ul tabIndex={0} aria-label="Diagram chord" className="mt-3 grid max-h-[calc(100svh-18rem)] grid-cols-2 gap-x-2 gap-y-3 overflow-y-auto rounded-md">
-          {chords.map((c) => {
-            const s = suggest(c, ctx);
-            const v = s.guitar[0];
-            return (
-              <li key={c} className="flex flex-col items-center rounded-md p-1">
-                <span className="text-sm font-bold text-accent">{c}</span>
-                {ctx.instrument === "guitar" ? (
-                  v ? <GuitarDiagram v={v} size={0.62} /> : <span className="py-6 text-xs text-muted">Belum ada</span>
-                ) : s.piano?.right.length ? (
-                  <PianoDiagram left={s.piano.left} right={s.piano.right} />
-                ) : (
-                  <span className="py-6 text-xs text-muted">Belum ada</span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    </aside>
-  );
-}
 

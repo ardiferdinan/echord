@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toNumber, type Line, type Section, type SectionType } from "@/lib/chordpro";
 import { suggest, type BandContext } from "@/lib/voicing";
-import { useBandContext } from "@/lib/storage";
+import { useBandContext, useLocal } from "@/lib/storage";
 import { GuitarDiagram, PianoDiagram } from "./Diagrams";
 
 export const SECTION_COLOR: Record<SectionType, string> = {
@@ -29,7 +29,7 @@ function SheetLine({ line, h, label }: { line: Line; h?: ChordHandlers; label: (
     <div className="flex flex-wrap items-end">
       {units(line).map((u, i) => (
         <span key={i} className="inline-flex flex-col">
-          <span className="h-[1.35em] pr-[0.5em] font-bold text-accent">
+          <span className="h-[1.35em] pr-[0.5em] font-bold text-[var(--sheet-chord)]">
             {u.chords.map((c, k) => (
               <button
                 key={k}
@@ -51,24 +51,34 @@ function SheetLine({ line, h, label }: { line: Line; h?: ChordHandlers; label: (
   );
 }
 
+/** Part marker: a tinted tag with a colored edge, one hue per part type (verse, chorus, bridge…). */
 export function SectionLabel({ s }: { s: Pick<Section, "label" | "type"> }) {
+  const c = SECTION_COLOR[s.type];
   return (
-    <span className="inline-flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.08em]" style={{ color: SECTION_COLOR[s.type] }}>
-      <span className="size-1.5 rounded-full" style={{ background: SECTION_COLOR[s.type] }} />
+    <span
+      className="section-tag inline-flex items-center rounded-[5px] py-[0.3em] pl-[0.7em] pr-[0.75em] text-[13px] font-bold uppercase leading-none tracking-[0.08em]"
+      style={{ color: c, background: `color-mix(in srgb, ${c} 16%, transparent)`, boxShadow: `inset 3px 0 0 ${c}` }}
+    >
       {s.label}
     </span>
   );
 }
 
+export type SheetColors = { chord: string; lyric: string };
+export const DEFAULT_COLORS: SheetColors = { chord: "#1ed760", lyric: "#ffffff" };
+/** Chord and lyric colors, chosen once and used on every chord sheet. */
+export const useSheetColors = () => useLocal<SheetColors>("echord:sheet-colors", DEFAULT_COLORS);
+
 /** numberKey: show chords as numbers of that key (C -> 1, Em -> 3m); hover still shows the real chord. */
 export function ChordSheet({ sections, fontSize = 17, interactive = true, numberKey }: { sections: Section[]; fontSize?: number; interactive?: boolean; numberKey?: string }) {
   const pop = useChordPopover();
   const label = (c: string) => (numberKey ? toNumber(c, numberKey) : c);
+  const [colors] = useSheetColors();
   return (
-    <div style={{ fontSize }} className="leading-snug">
+    <div style={{ fontSize, color: colors.lyric, ["--sheet-chord" as string]: colors.chord }} className="chord-sheet leading-snug">
       {sections.map((s, i) => (
         <section key={i} className="mb-8 break-inside-avoid">
-          <div className="mb-2">
+          <div className="mb-3">
             <SectionLabel s={s} />
           </div>
           {s.lines.map((l, k) => (
@@ -149,7 +159,7 @@ function ChordPopover({ chord, rect, onEnter, onLeave, onClose }: { chord: strin
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
       style={{ position: "fixed", left, width: W, ...style, fontSize: 14 }}
-      className="z-50 rounded-lg bg-[#282828] p-4 shadow-2xl shadow-black/60"
+      className="z-50 rounded-lg bg-[#282828] p-4 text-ink shadow-2xl shadow-black/60"
     >
       <div className="mb-2 flex items-center gap-2">
         <span className="text-xl font-bold text-accent">{chord}</span>

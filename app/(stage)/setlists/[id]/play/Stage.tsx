@@ -1,24 +1,29 @@
 "use client";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { detectKey, transposeKey } from "@/lib/chordpro";
 import { useLocal, useSetlists, type Setlist } from "@/lib/storage";
 import { ChordSheet } from "@/components/ChordSheet";
 import { arranged } from "@/components/SetlistEditor";
+import { ChordShapes } from "@/components/ChordShapes";
+import { SheetColorButton } from "@/components/SheetColors";
+import { ChordIcon, NoteIcon } from "@/components/icons";
 
 /** Stage for a setlist saved in this browser. */
 export function LocalStage({ id }: { id: string }) {
   const [setlists] = useSetlists();
   const setlist = setlists.find((s) => s.id === id);
-  return setlist ? <Stage setlist={setlist} backHref={`/setlists/${id}`} /> : null;
+  return setlist ? <Stage setlist={setlist} backHref={`/setlists/${id}`} printHref={`/setlists/${id}/print`} /> : null;
 }
 
-export function Stage({ setlist, backHref }: { setlist: Setlist; backHref: string }) {
+export function Stage({ setlist, backHref, printHref }: { setlist: Setlist; backHref: string; printHref?: string }) {
   const [i, setI] = useState(0);
   const [font, setFont] = useLocal("echord:stage-font", 24);
   const [numbers, setNumbers] = useLocal("echord:numbers", false); // same choice as the song page
   const [speed, setSpeed] = useLocal("echord:scroll-speed", 20); // px per second
   const [scrolling, setScrolling] = useState(false);
+  const [shapes, setShapes] = useLocal("echord:stage-shapes", false); // chord shapes panel
   const box = useRef<HTMLDivElement>(null);
   const items = setlist.items;
   const item = items[i];
@@ -102,6 +107,11 @@ export function Stage({ setlist, backHref }: { setlist: Setlist; backHref: strin
         <button className="grid h-11 shrink-0 place-items-center rounded-full px-3 font-bold transition hover:bg-white/10 aria-pressed:bg-ink aria-pressed:text-app sm:h-10" onClick={() => setNumbers(!numbers)} aria-pressed={numbers} title="Nama chord / chord angka">
           {numbers ? "123" : "Abc"}
         </button>
+        <SheetColorButton />
+        <button className="grid h-11 shrink-0 place-items-center rounded-full px-3 transition hover:bg-white/10 aria-pressed:bg-ink aria-pressed:text-app sm:h-10" onClick={() => setShapes(!shapes)} aria-pressed={shapes} aria-label="Bentuk chord" title="Bentuk chord">
+          <ChordIcon className="size-5" />
+        </button>
+        {printHref && <Link href={printHref} target="_blank" className="hidden h-10 shrink-0 place-items-center rounded-full px-3 font-bold transition hover:bg-white/10 sm:grid" title="Cetak / simpan PDF">PDF</Link>}
         <button className="btn-icon hidden sm:grid" onClick={() => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen())} aria-label="Layar penuh">⛶</button>
       </div>
 
@@ -117,19 +127,25 @@ export function Stage({ setlist, backHref }: { setlist: Setlist; backHref: strin
         }}
       >
         {item ? (
-          <div className="mx-auto max-w-4xl">
-            <header className="mb-8 flex items-end gap-5">
-              <span className="grid size-24 shrink-0 place-items-center rounded-md bg-gradient-to-br from-[#2f2f2f] to-[#1a1a1a] text-4xl font-black text-accent shadow-xl shadow-black/50 sm:size-28" aria-label={key ? `Kunci ${key}` : undefined}>
-                {key ?? "♪"}
+          <div className={`mx-auto ${shapes ? "max-w-6xl lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-8" : "max-w-4xl"}`}>
+          <div className="min-w-0">
+            <header className="mb-8 flex items-end gap-4 sm:gap-5">
+              <span className="relative grid size-20 shrink-0 place-items-center overflow-clip rounded-md bg-gradient-to-br from-[#2f2f2f] to-[#1a1a1a] text-muted shadow-xl shadow-black/50 sm:size-24">
+                {item.artwork ? <Image src={item.artwork} alt="" fill sizes="96px" className="object-cover" /> : <NoteIcon className="size-8" />}
               </span>
               <div className="min-w-0">
-                <h1 className="headline text-[clamp(32px,4.4vw,60px)]">{item.title}</h1>
-                {item.artist && <p className="mt-2 text-sm font-semibold text-muted">{item.artist}</p>}
+                <h1 className="text-[clamp(22px,2.6vw,34px)] font-black leading-tight tracking-[-0.03em]">{item.title}</h1>
+                <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
+                  {key && <span className="rounded-full bg-accent-soft px-2.5 py-0.5 font-bold text-accent">Kunci {key}</span>}
+                  {item.transpose !== 0 && item.originalKey && <span>asli {item.originalKey}</span>}
+                  {item.artist && <span className="font-semibold">{item.artist}</span>}
+                </p>
               </div>
             </header>
             {item.notes && <p className="mb-6 rounded-md bg-[#1f1f1f] px-4 py-3 text-base">{item.notes}</p>}
+            {shapes && <ChordShapes sections={arranged(item)} className="mb-8 lg:hidden" />}
             <div className="px-2 sm:px-4">
-              <ChordSheet sections={arranged(item)} fontSize={font} interactive={false} numberKey={numbers ? key || detectKey(arranged(item)) : undefined} />
+              <ChordSheet sections={arranged(item)} fontSize={font} numberKey={numbers ? key || detectKey(arranged(item)) : undefined} />
             </div>
             {next && (
               <button onClick={() => go(i + 1)} className="group mt-12 flex w-full max-w-md items-center gap-4 rounded-lg bg-[#1f1f1f] p-4 text-left transition hover:bg-card-hover sm:ml-auto" aria-label={`Lagu berikutnya: ${next.title}`}>
@@ -141,6 +157,12 @@ export function Stage({ setlist, backHref }: { setlist: Setlist; backHref: strin
                 <span className="grid size-12 shrink-0 place-items-center rounded-full bg-brand text-xl text-on-brand transition group-hover:scale-[1.06]" aria-hidden>→</span>
               </button>
             )}
+          </div>
+          {shapes && (
+            <aside className="hidden lg:block" aria-label="Bentuk chord">
+              <ChordShapes sections={arranged(item)} className="sticky top-0" />
+            </aside>
+          )}
           </div>
         ) : (
           <p className="text-center text-muted">Setlist kosong.</p>

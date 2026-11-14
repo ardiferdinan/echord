@@ -95,6 +95,9 @@ export function SetlistEditor({ id }: { id: string }) {
           setlist={setlist}
           onShared={(share) => setSetlists((all) => all.map((s) => (s.id === id ? { ...s, share, sharedAt: s.updatedAt } : s)))}
         />
+        <Link href={`/setlists/${id}/print`} target="_blank" className="btn" aria-disabled={!setlist.items.length} title="Satu lagu per lembar A4">
+          Cetak PDF
+        </Link>
         <button
           className="btn-icon"
           onClick={() => confirm(`Hapus setlist "${setlist.name}"?`) && (setSetlists((all) => all.filter((s) => s.id !== id)), router.push("/setlists"))}

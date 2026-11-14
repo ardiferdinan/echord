@@ -254,6 +254,19 @@ export function suggest(chord: string, ctx: BandContext, all = guitarVoicings(ch
     };
   }
 
+  if (ctx.guitarType === "electric") {
+    // alone on electric: power chord (root + 5th) for drive, triads on the top strings for clean parts
+    const m = chord.match(CHORD_RE);
+    const power = m && !/dim|°|ø|aug|\+/.test(m[2]) ? movable(m[1], "5").map((v) => ({ ...v, tag: `Power chord ${m[1]}5` })) : [];
+    const triads = all.map((v) => topStrings(v, chord, 3)).filter((v): v is GuitarVoicing => !!v);
+    const seen = new Set<string>();
+    const guitar = [...power, ...triads, ...all].filter((v) => {
+      const k = v.frets.join() + v.baseFret;
+      return seen.has(k) ? false : (seen.add(k), true);
+    });
+    return { tip: "Gitar elektrik: power chord untuk bagian yang keras (distorsi), triad di senar atas untuk bagian clean atau ringan.", guitar };
+  }
+
   return {
     tip:
       ctx.hasPiano || ctx.hasGuitar
