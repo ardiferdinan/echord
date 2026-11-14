@@ -79,7 +79,7 @@ export function Popover({
         aria-label={label}
         onToggle={(e) => setOpen(e.newState === "open")}
         onClick={(e) => e.stopPropagation()}
-        className={`fixed inset-auto m-0 max-h-[min(70vh,480px)] overflow-y-auto rounded-md bg-[#282828] p-1 text-ink shadow-[0_16px_24px_rgba(0,0,0,.5)] ${panelClass}`}
+        className={`fixed inset-auto m-0 max-h-[min(70vh,480px)] overflow-y-auto on-dark rounded-md bg-[#282828] p-1 text-ink shadow-[0_16px_24px_rgba(0,0,0,.5)] ${panelClass}`}
       >
         {open && children(close)}
       </div>

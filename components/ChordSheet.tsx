@@ -106,7 +106,7 @@ export function ChordSheet({ sections, fontSize = 17, interactive = true, number
   const label = (c: string) => (numberKey ? toNumber(c, numberKey) : c);
   const [colors] = useSheetColors();
   return (
-    <div style={{ fontSize, color: colors.lyric, ["--sheet-chord" as string]: colors.chord }} className="chord-sheet leading-snug">
+    <div style={{ fontSize, color: colors.lyric, ["--sheet-chord" as string]: colors.chord, ["--sheet-chord-pick" as string]: colors.chord }} className="chord-sheet leading-snug">
       {sections.map((s, i) =>
         s.heading ? (
           // medley: the next song's title and key
@@ -202,7 +202,7 @@ function ChordPopover({ chord, rect, onEnter, onLeave, onClose }: { chord: strin
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
       style={{ position: "fixed", left, width: W, ...style, fontSize: 14 }}
-      className="z-50 rounded-lg bg-[#282828] p-4 text-ink shadow-2xl shadow-black/60"
+      className="on-dark z-50 rounded-lg bg-[#282828] p-4 text-ink shadow-2xl shadow-black/60"
     >
       <div className="mb-2 flex items-center gap-2">
         <span className="text-xl font-bold text-accent">{chord}</span>

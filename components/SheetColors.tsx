@@ -30,7 +30,7 @@ export function SheetColorButton({ className = "" }: { className?: string }) {
     <Popover
       label="Warna teks"
       buttonClass={`grid h-11 shrink-0 place-items-center rounded-full px-3 font-bold transition hover:bg-white/10 data-[open]:bg-white/10 sm:h-10 ${className}`}
-      button={<span aria-hidden><span style={{ color: colors.chord }}>A</span><span style={{ color: colors.lyric }}>a</span></span>}
+      button={<span aria-hidden><span style={{ color: colors.chord }}>A</span><span className="lyric-sample" style={{ color: colors.lyric }}>a</span></span>}
       panelClass="w-72 p-3"
     >
       {() => (

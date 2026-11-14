@@ -10,7 +10,7 @@ import { arranged } from "@/components/SetlistEditor";
 import { ChordShapes } from "@/components/ChordShapes";
 import { SheetColorButton } from "@/components/SheetColors";
 import { Popover } from "@/components/Popover";
-import { ArrowRightIcon, ChevronIcon, ChordIcon, CloseIcon, ColumnsIcon, DotsIcon, ExpandIcon, MinusIcon, NoteIcon, PauseIcon, PlayIcon, PlusIcon } from "@/components/icons";
+import { ArrowRightIcon, ChevronIcon, ChordIcon, CloseIcon, ColumnsIcon, DotsIcon, MoonIcon, SunIcon, ExpandIcon, MinusIcon, NoteIcon, PauseIcon, PlayIcon, PlusIcon } from "@/components/icons";
 
 type WebkitDoc = Document & { webkitFullscreenElement?: Element; webkitExitFullscreen?: () => void };
 type WebkitEl = HTMLElement & { webkitRequestFullscreen?: () => void };
@@ -46,7 +46,8 @@ export function Stage({ setlist, backHref, printHref, editHref, onTranspose }: {
   const [speed, setSpeed] = useLocal("echord:scroll-speed", 20); // px per second
   const [scrolling, setScrolling] = useState(false);
   const [shapes, setShapes] = useLocal("echord:stage-shapes", false); // chord shapes panel
-  const [all, setAll] = useLocal("echord:stage-all", false); // "show all": the whole song fitted on screen, no scrolling
+  const [all, setAll] = useLocal("echord:stage-all", false);
+  const [light, setLight] = useLocal("echord:stage-light", false); // white page instead of black (bright rooms, daylight) // "show all": the whole song fitted on screen, no scrolling
   const fitBox = useRef<HTMLDivElement>(null);
   const [fsTip, setFsTip] = useState(false); // browser without the Fullscreen API (iPhone)
   const box = useRef<HTMLDivElement>(null);
@@ -142,6 +143,9 @@ export function Stage({ setlist, backHref, printHref, editHref, onTranspose }: {
   // view settings, shown inline on wide screens and in the ⋯ menu on narrow ones
   const tools = (
     <>
+      <button className="btn-icon" onClick={() => setLight(!light)} aria-pressed={light} aria-label={light ? "Latar hitam" : "Latar putih"} title={light ? "Latar hitam" : "Latar putih"}>
+        {light ? <MoonIcon className="size-5" /> : <SunIcon className="size-5" />}
+      </button>
       <button className="btn-icon" onClick={() => setFont(Math.max(14, font - 2))} aria-label="A− perkecil teks">A−</button>
       <button className="btn-icon" onClick={() => setFont(Math.min(48, font + 2))} aria-label="A+ perbesar teks">A+</button>
       <button className="grid h-11 shrink-0 place-items-center rounded-full px-3 font-bold transition hover:bg-white/10 aria-pressed:bg-ink aria-pressed:text-app sm:h-10" onClick={() => setNumbers(!numbers)} aria-pressed={numbers} title="Nama chord / chord angka">
@@ -156,9 +160,9 @@ export function Stage({ setlist, backHref, printHref, editHref, onTranspose }: {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-panel text-ink">
+    <div className={`fixed inset-0 z-50 flex flex-col bg-panel text-ink ${light ? "stage-light" : ""}`}>
       {/* floating top pill */}
-      <div className="mx-3 mt-3 flex items-center gap-1 overflow-x-auto rounded-full bg-[#1f1f1f] p-1.5 pr-2 text-sm [scrollbar-width:none] max-sm:[&_.btn-icon]:size-10 sm:mx-6 sm:gap-1.5 [&>*]:shrink-0">
+      <div className="mx-3 mt-3 flex items-center gap-1 overflow-x-auto rounded-full bg-card p-1.5 pr-2 text-sm [scrollbar-width:none] max-sm:[&_.btn-icon]:size-10 sm:mx-6 sm:gap-1.5 [&>*]:shrink-0">
         <Link href={backHref} className="grid size-10 place-items-center rounded-full bg-black/40 text-muted hover:text-ink sm:size-10" aria-label="Keluar stage mode"><CloseIcon className="size-5" /></Link>
         <span className="px-1 text-base font-bold tabular-nums sm:px-2 sm:text-lg">
           {String(i + 1).padStart(2, "0")}
@@ -219,7 +223,7 @@ export function Stage({ setlist, backHref, printHref, editHref, onTranspose }: {
       </div>
 
       {fsTip && (
-        <div role="status" className="mx-3 mt-2 flex items-start gap-3 rounded-lg bg-[#282828] p-3 text-sm sm:mx-6">
+        <div role="status" className="mx-3 mt-2 flex items-start gap-3 rounded-lg bg-card p-3 text-sm sm:mx-6">
           <p className="flex-1">Browser ini tidak mendukung layar penuh. Cara lain: buka menu <b>Bagikan</b> → <b>Tambah ke Layar Utama</b>, lalu buka Echord dari ikon itu. Tampilannya tanpa bar browser.</p>
           <button className="btn-icon size-8 sm:size-8" onClick={() => setFsTip(false)} aria-label="Tutup"><CloseIcon className="size-4" /></button>
         </div>
@@ -267,7 +271,7 @@ export function Stage({ setlist, backHref, printHref, editHref, onTranspose }: {
                 </p>
               </div>
             </header>
-            {item.notes && <p className="mb-6 rounded-md bg-[#1f1f1f] px-4 py-3 text-base">{item.notes}</p>}
+            {item.notes && <p className="mb-6 rounded-md bg-card px-4 py-3 text-base">{item.notes}</p>}
             {shapes && <ChordShapes sections={arranged(item)} className="mb-8 lg:hidden" />}
             {all ? (
               <div key="fit-box" ref={fitBox} className="flow min-h-0 flex-1 overflow-hidden px-2 [column-fill:auto] [column-gap:3rem] [column-rule:1px_solid_rgb(255_255_255/.1)] sm:px-4">
@@ -279,7 +283,7 @@ export function Stage({ setlist, backHref, printHref, editHref, onTranspose }: {
               </div>
             )}
             {next && !all && (
-              <button onClick={() => go(i + 1)} className="group mt-12 flex w-full max-w-md items-center gap-4 rounded-lg bg-[#1f1f1f] p-4 text-left transition hover:bg-card-hover sm:ml-auto" aria-label={`Lagu berikutnya: ${next.title}`}>
+              <button onClick={() => go(i + 1)} className="group mt-12 flex w-full max-w-md items-center gap-4 rounded-lg bg-card p-4 text-left transition hover:bg-card-hover sm:ml-auto" aria-label={`Lagu berikutnya: ${next.title}`}>
                 <span className="min-w-0 flex-1">
                   <span className="text-xs font-bold uppercase tracking-[0.1em] text-muted">Berikutnya</span>
                   <span className="mt-1 block truncate text-xl font-black tracking-[-0.03em]">{next.title}</span>
