@@ -5,13 +5,14 @@ import { useEffect, useMemo, useState, ViewTransition } from "react";
 import { detectKey, parseSections, transposeKey, transposeSections, type Section } from "@/lib/chordpro";
 import type { Song } from "@/lib/db";
 import { suggest } from "@/lib/voicing";
-import { newItem, uid, useBandContext, useLocal, useSetlists } from "@/lib/storage";
+import { useBandContext, useLocal } from "@/lib/storage";
 import { BandContextPicker, ChordSheet } from "@/components/ChordSheet";
 import { FontControl, NumbersControl, TransposeControl } from "@/components/Controls";
 import { GuitarDiagram, PianoDiagram } from "@/components/Diagrams";
 import { PlayButton } from "@/components/player/PlayButton";
+import { AddToSetlist } from "@/components/AddToSetlist";
 import { usePlayer } from "@/components/player/PlayerProvider";
-import { NoteIcon, PlusIcon } from "@/components/icons";
+import { NoteIcon } from "@/components/icons";
 import { artistHref } from "@/components/library";
 
 export function SongView({ song }: { song: Song }) {
@@ -68,7 +69,7 @@ export function SongView({ song }: { song: Song }) {
       {/* actions: one row that scrolls sideways on phones */}
       <div className="sticky top-16 z-20 -mx-4 flex items-center gap-3 overflow-x-auto bg-panel/95 px-4 py-4 backdrop-blur-md sm:-mx-6 sm:gap-4 sm:px-6">
         {playable && <PlayButton track={song} size="lg" />}
-        <AddToSetlist song={song} transpose={transpose} />
+        <AddToSetlist song={song} transpose={transpose} size="lg" />
         <span className="mx-1 h-8 w-px shrink-0 bg-line" aria-hidden />
         <TransposeControl value={transpose} onChange={setTranspose} originalKey={song.original_key} />
         <NumbersControl value={numbers} onChange={setNumbers} />
@@ -132,45 +133,3 @@ function ChordRail({ sections }: { sections: Section[] }) {
   );
 }
 
-function AddToSetlist({ song, transpose }: { song: Song; transpose: number }) {
-  const [setlists, setSetlists] = useSetlists();
-  const [open, setOpen] = useState(false);
-  const [added, setAdded] = useState<string | null>(null);
-
-  const add = (id: string | null) => {
-    const item = newItem(song, transpose);
-    const target = id ?? uid();
-    setSetlists((prev) =>
-      id
-        ? prev.map((s) => (s.id === id ? { ...s, items: [...s.items, item], updatedAt: Date.now() } : s))
-        : [{ id: target, name: "Setlist baru", items: [item], updatedAt: Date.now() }, ...prev],
-    );
-    setAdded(target);
-    setOpen(false);
-  };
-
-  if (added) return <Link href={`/setlists/${added}`} className="btn shrink-0">Ditambahkan · buka setlist</Link>;
-  return (
-    <div className="relative shrink-0">
-      <button
-        className="grid size-10 place-items-center rounded-full border-2 border-muted text-muted transition hover:scale-[1.06] hover:border-ink hover:text-ink"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-        aria-label="Tambahkan ke setlist"
-        title="Tambahkan ke setlist"
-      >
-        <PlusIcon className="size-5" />
-      </button>
-      {open && (
-        <div className="fixed z-40 mt-2 w-64 rounded-md bg-[#282828] p-1 shadow-2xl shadow-black/60" role="menu">
-          <button role="menuitem" onClick={() => add(null)} className="w-full rounded-sm px-3 py-2.5 text-left text-sm font-semibold hover:bg-white/10">+ Setlist baru</button>
-          {setlists.map((s) => (
-            <button role="menuitem" key={s.id} onClick={() => add(s.id)} className="w-full truncate rounded-sm px-3 py-2.5 text-left text-sm hover:bg-white/10">
-              {s.name} <span className="text-muted">· {s.items.length} lagu</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}

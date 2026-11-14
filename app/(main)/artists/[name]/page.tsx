@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { listSongs } from "@/lib/db";
-import { TrackList } from "@/components/library";
+import { TrackList, track } from "@/components/library";
 import { PlayButton } from "@/components/player/PlayButton";
 
 export async function generateMetadata({ params }: PageProps<"/artists/[name]">) {
@@ -40,7 +40,7 @@ async function Artist({ params }: Pick<PageProps<"/artists/[name]">, "params">) 
       </header>
       {first && (
         <div className="py-6">
-          <PlayButton track={first} size="lg" />
+          <PlayButton track={track(first)} queue={songs.filter((s) => s.has_preview).map(track)} size="lg" />
         </div>
       )}
       <h2 className="mb-3 mt-2 text-2xl font-bold tracking-[-0.02em]">Lagu</h2>

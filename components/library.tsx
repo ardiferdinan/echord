@@ -2,11 +2,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { ViewTransition, type ReactNode } from "react";
 import type { ArtistCard as Artist, SongCard as Song } from "@/lib/db";
-import { PlayButton } from "./player/PlayButton";
+import { PlayButton, QueueScope } from "./player/PlayButton";
+import { AddToSetlist, SongMenu } from "./AddToSetlist";
 import { NoteIcon } from "./icons";
 
 export const artistHref = (name: string) => `/artists/${encodeURIComponent(name)}`;
-const track = (s: Song) => ({ id: s.id, slug: s.slug, title: s.title, artist: s.artist, artwork_url: s.artwork_url });
+export const track = (s: Song) => ({ id: s.id, slug: s.slug, title: s.title, artist: s.artist, artwork_url: s.artwork_url });
 
 /** Cover, or the song's key on a tile when there is no artwork. */
 export function Cover({ s, className, sizes = "200px" }: { s: Pick<Song, "artwork_url" | "original_key">; className: string; sizes?: string }) {
@@ -63,18 +64,19 @@ export function Shelf({ title, href, children }: { title: string; href?: string;
 /** Track list: # (play on hover) · cover + title + artist · album · key. Rows never overflow: the middle column shrinks and truncates. */
 export function TrackList({ songs, start = 0, showArtist = true }: { songs: Song[]; start?: number; showArtist?: boolean }) {
   return (
+    <QueueScope tracks={songs.filter((s) => s.has_preview).map(track)}>
     <div role="table" aria-label="Daftar lagu">
-      <div role="row" className="sticky top-16 z-10 mb-2 hidden grid-cols-[2.5rem_minmax(0,1fr)_3.5rem] items-center gap-4 border-b border-line bg-panel px-4 py-2 text-sm text-muted md:grid md:grid-cols-[2.5rem_minmax(0,4fr)_minmax(0,3fr)_3.5rem]">
+      <div role="row" className="sticky top-16 z-10 mb-2 hidden grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-4 border-b border-line bg-panel px-4 py-2 text-sm text-muted md:grid md:grid-cols-[2.5rem_minmax(0,4fr)_minmax(0,3fr)_8.5rem]">
         <span role="columnheader" className="text-right">#</span>
         <span role="columnheader">Judul</span>
         <span role="columnheader" className="hidden md:block">Album</span>
-        <span role="columnheader" className="text-right">Kunci</span>
+        <span role="columnheader" className="pr-10 text-right">Kunci</span>
       </div>
       {songs.map((s, i) => (
         <div
           role="row"
           key={s.id}
-          className="track-row group relative grid grid-cols-[2.5rem_minmax(0,1fr)_3rem] items-center gap-3 rounded-md px-2 py-2 transition hover:bg-white/10 focus-within:bg-white/10 sm:gap-4 sm:px-4 md:grid-cols-[2.5rem_minmax(0,4fr)_minmax(0,3fr)_3.5rem]"
+          className="track-row group relative grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-md px-2 py-2 transition hover:bg-white/10 focus-within:bg-white/10 has-[[data-open]]:bg-white/10 sm:gap-4 sm:px-4 md:grid-cols-[2.5rem_minmax(0,4fr)_minmax(0,3fr)_8.5rem]"
         >
           <span role="cell" className="relative z-10 grid place-items-center justify-items-end text-[15px] tabular-nums text-muted">
             <span className={s.has_preview ? "track-num" : ""}>{start + i + 1}</span>
@@ -94,9 +96,15 @@ export function TrackList({ songs, start = 0, showArtist = true }: { songs: Song
             </span>
           </span>
           <span role="cell" className="hidden truncate text-sm text-muted md:block">{s.album ?? ""}</span>
-          <span role="cell" className="text-right text-sm font-bold text-muted">{s.original_key ?? ""}</span>
+          <span role="cell" className="relative z-10 flex items-center justify-end gap-1 sm:gap-2">
+            {/* + and ⋯ show on hover / focus (⋯ always on touch screens), like a music app's track row */}
+            <AddToSetlist song={s} size="sm" className="row-tool hidden md:grid" />
+            <span className="w-8 text-center text-sm font-bold text-muted">{s.original_key ?? ""}</span>
+            <SongMenu song={s} className="row-tool" />
+          </span>
         </div>
       ))}
     </div>
+    </QueueScope>
   );
 }

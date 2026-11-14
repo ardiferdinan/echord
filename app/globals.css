@@ -84,6 +84,9 @@ body {
   outline-offset: 2px;
   border-radius: 6px;
 }
+/* the search pill draws its own ring around the whole pill */
+.search-input:focus-visible { outline: none; }
+.search-input::-webkit-search-cancel-button { filter: grayscale(1) brightness(1.6); cursor: pointer; }
 
 /* 44px touch targets on phones, 40px on desktop; 16px input text (no iOS zoom) */
 @utility btn {
@@ -135,6 +138,10 @@ body {
 .play-pop[data-active="true"] { opacity: 1; translate: 0 0; }
 
 /* Track row: the number turns into a play button on hover */
+/* row tools: hidden until the row is hovered or focused, kept while their popover is open; always shown without hover */
+@media (hover: hover) {
+  .track-row:not(:hover, :focus-within) .row-tool:not([data-open], :has(circle[fill])) { opacity: 0; }
+}
 .track-row .track-num { display: block; }
 .track-row .track-play { display: none; }
 @media (hover: hover) {

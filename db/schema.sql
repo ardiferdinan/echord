@@ -25,6 +25,10 @@ alter table songs add column if not exists enriched_at timestamptz;
 -- fallback when iTunes has no match: Deezer track (embed player; its preview links expire)
 alter table songs add column if not exists deezer_id bigint;
 
+-- music genre (lib/genres.ts, filled by scripts/genre.mts; new songs get one on insert)
+alter table songs add column if not exists genre text;
+create index if not exists songs_genre on songs (genre);
+
 -- shared setlist snapshots; token lets the creator update the same link
 create table if not exists shared_setlists (
   id text primary key,

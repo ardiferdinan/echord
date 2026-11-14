@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { logout } from "@/app/login/actions";
 import { ChevronIcon, LogoutIcon, Mark, SearchIcon } from "../icons";
 
@@ -36,20 +36,45 @@ export function TopBar() {
 }
 
 function SearchFromUrl() {
-  const q = useSearchParams().get("q") ?? "";
-  return <Search key={q} q={q} />;
+  return <Search q={useSearchParams().get("q") ?? ""} />;
 }
 
+/** Search as you type, like a music app: results update on /search while typing, Enter goes at once. */
 function Search({ q }: { q: string }) {
+  const router = useRouter();
+  const input = useRef<HTMLInputElement>(null);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // follow the URL (back button, links) but never overwrite what is being typed
+  useEffect(() => {
+    if (input.current && document.activeElement !== input.current) input.current.value = q;
+  }, [q]);
+  const go = (v: string, delay: number) => {
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      const url = v.trim() ? `/search?q=${encodeURIComponent(v.trim())}` : "/search";
+      if (window.location.pathname === "/search") router.replace(url, { scroll: false });
+      else router.push(url);
+    }, delay);
+  };
   return (
-    <form action="/songs" role="search" className="group ml-1 flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full bg-[#1f1f1f] px-4 ring-white/80 transition hover:bg-[#2a2a2a] focus-within:ring-2 sm:max-w-[420px] lg:ml-3 lg:h-12">
+    <form
+      action="/search"
+      role="search"
+      onSubmit={(e) => { e.preventDefault(); go(input.current?.value ?? "", 0); }}
+      className="group ml-1 flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full bg-[#1f1f1f] px-4 ring-white/80 transition hover:bg-[#2a2a2a] focus-within:ring-2 sm:max-w-[420px] lg:ml-3 lg:h-12"
+    >
       <SearchIcon className="size-5 shrink-0 text-muted group-focus-within:text-ink" />
       <input
+        ref={input}
+        type="search"
         name="q"
         defaultValue={q}
-        placeholder="Cari lagu atau penyanyi"
+        onChange={(e) => go(e.target.value, 300)}
+        onFocus={() => window.location.pathname !== "/search" && !input.current?.value && router.push("/search")}
+        placeholder="Mau main lagu apa?"
         aria-label="Cari lagu atau penyanyi"
-        className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted sm:text-[15px]"
+        autoComplete="off"
+        className="search-input min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted sm:text-[15px]"
       />
     </form>
   );

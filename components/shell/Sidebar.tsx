@@ -29,7 +29,7 @@ export function Sidebar() {
           <span className="text-xl font-black tracking-[-0.03em]">echord</span>
         </Link>
         <ActiveLink href="/" exact className={nav}>{(on) => <><HomeIcon filled={on} className="size-6" /> Beranda</>}</ActiveLink>
-        <ActiveLink href="/songs" exact className={nav}>{() => <><SearchIcon className="size-6" /> Cari</>}</ActiveLink>
+        <ActiveLink href="/search" className={nav}>{() => <><SearchIcon className="size-6" /> Cari</>}</ActiveLink>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col rounded-lg bg-panel">

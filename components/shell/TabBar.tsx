@@ -9,7 +9,7 @@ export function TabBar() {
   return (
     <nav aria-label="Navigasi utama" className="flex h-16 items-stretch bg-gradient-to-t from-black via-black/95 to-black/80 lg:hidden">
       <ActiveLink href="/" exact className={tab}>{(on) => <><HomeIcon filled={on} className="size-6" />Beranda</>}</ActiveLink>
-      <ActiveLink href="/songs" exact className={tab}>{() => <><SearchIcon className="size-6" />Cari</>}</ActiveLink>
+      <ActiveLink href="/search" className={tab}>{() => <><SearchIcon className="size-6" />Cari</>}</ActiveLink>
       <ActiveLink href="/chords" className={tab}>{() => <><ChordIcon className="size-6" />Chord</>}</ActiveLink>
       <ActiveLink href="/setlists" className={tab}>{() => <><LibraryIcon className="size-6" />Pustaka</>}</ActiveLink>
     </nav>

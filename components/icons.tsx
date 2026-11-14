@@ -47,3 +47,17 @@ export function Mark({ className = "size-8", tile = false }: { className?: strin
   );
 }
 export const TrashIcon = (p: P) => <svg {...base(p)} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" /></svg>;
+const line = (p: P) => ({ ...base(p), fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const });
+export const ShuffleIcon = (p: P) => <svg {...line(p)}><path d="M16 4h4v4M4 18h3.5a4 4 0 0 0 3.3-1.7l3.4-4.6A4 4 0 0 1 17.5 10H20M16 20h4v-4M20 4l-4 4M4 6h3.5a4 4 0 0 1 2.9 1.2M20 20l-3-3M14 17.4a4 4 0 0 0 3.5 2.6H20" /></svg>;
+export const PrevIcon = (p: P) => <svg {...base(p)} fill="currentColor"><rect x="4" y="4" width="2.6" height="16" rx="1" /><path d="M20 5.2v13.6a1 1 0 0 1-1.6.8L9 12.8a1 1 0 0 1 0-1.6l9.4-6.8a1 1 0 0 1 1.6.8Z" /></svg>;
+export const NextIcon = (p: P) => <svg {...base(p)} fill="currentColor"><rect x="17.4" y="4" width="2.6" height="16" rx="1" /><path d="M4 5.2v13.6a1 1 0 0 0 1.6.8l9.4-6.8a1 1 0 0 0 0-1.6L5.6 4.4A1 1 0 0 0 4 5.2Z" /></svg>;
+export const RepeatIcon = ({ one, ...p }: P & { one?: boolean }) => (
+  <svg {...line(p)}><path d="M17 2l3 3-3 3M3 11V9a4 4 0 0 1 4-4h13M7 22l-3-3 3-3M21 13v2a4 4 0 0 1-4 4H4" />{one && <text x="12" y="14.5" fontSize="7" fontWeight="800" textAnchor="middle" fill="currentColor" stroke="none">1</text>}</svg>
+);
+export const PlusCircleIcon = (p: P) => <svg {...line(p)} strokeWidth={1.8}><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></svg>;
+export const CheckCircleIcon = (p: P) => <svg {...base(p)}><circle cx="12" cy="12" r="10" fill="var(--green)" /><path d="m7.5 12.2 3 3 6-6.4" fill="none" stroke="#000" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+export const DotsIcon = (p: P) => <svg {...base(p)} fill="currentColor"><circle cx="5" cy="12" r="1.9" /><circle cx="12" cy="12" r="1.9" /><circle cx="19" cy="12" r="1.9" /></svg>;
+export const QueueIcon = (p: P) => <svg {...line(p)}><path d="M3 5h12M3 10h12M3 15h7M15 15v5a2 2 0 1 0 2-2h-2M17 13l4-1" /></svg>;
+export const QueueAddIcon = (p: P) => <svg {...line(p)}><path d="M3 6h12M3 11h12M3 16h8M18 13v8M14 17h8" /></svg>;
+export const UserIcon = (p: P) => <svg {...line(p)}><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>;
+export const LinkIcon = (p: P) => <svg {...line(p)}><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>;

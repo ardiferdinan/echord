@@ -1,4 +1,5 @@
 import { neon } from "@neondatabase/serverless";
+import { genreFor, type Genre } from "./genres";
 
 export type Song = {
   id: number;
@@ -75,6 +76,32 @@ export async function topArtists(limit = 12): Promise<ArtistCard[]> {
     group by artist order by count(*) desc limit ${limit}`) as ArtistCard[];
 }
 
+/** Search: artists whose name matches, most songs first. */
+export async function searchArtists(q: string, limit = 12): Promise<ArtistCard[]> {
+  const like = `%${q.trim()}%`;
+  return (await db()`
+    select artist, count(*)::int as songs, (array_agg(artwork_url order by id) filter (where artwork_url is not null))[1] as artwork_url
+    from songs where status = 'published' and artist ilike ${like} and artist <> 'Various Artists'
+    group by artist order by (lower(artist) = lower(${q.trim()})) desc, count(*) desc limit ${limit}`) as ArtistCard[];
+}
+
+/** One genre's songs (covers first, then A–Z), paginated. */
+export async function genreSongs(g: Genre, page = 1, per = 50): Promise<{ songs: SongCard[]; total: number }> {
+  const rows = (await db()`
+    select id, slug, title, artist, original_key, artwork_url, album, (preview_url is not null or deezer_id is not null) as has_preview, count(*) over()::int as total
+    from songs where status = 'published' and genre = ${g.slug}
+    order by artwork_url is null, lower(title) limit ${per} offset ${(Math.max(1, page) - 1) * per}`) as (SongCard & { total: number })[];
+  return { songs: rows, total: rows[0]?.total ?? 0 };
+}
+
+/** Song count and one cover per genre, for the browse tiles. */
+export async function genreStats(): Promise<Record<string, { songs: number; artwork_url: string | null }>> {
+  const rows = (await db()`
+    select genre, count(*)::int as songs, (array_agg(artwork_url order by hashtext(title)) filter (where artwork_url is not null))[1] as artwork_url
+    from songs where status = 'published' and genre is not null group by genre`) as { genre: string; songs: number; artwork_url: string | null }[];
+  return Object.fromEntries(rows.map((r) => [r.genre, r]));
+}
+
 /** A playable preview URL: the stored iTunes one, or a fresh Deezer one (their links expire). */
 export async function getPreview(id: number): Promise<{ url: string; listen_url?: string } | undefined> {
   const [s] = (await db()`select preview_url, deezer_id from songs where id = ${id}`) as Pick<Song, "preview_url" | "deezer_id">[];
@@ -115,11 +142,11 @@ type NewSong = Omit<Song, "id" | "slug" | "category"> & { category?: string };
 export async function insertSong(s: NewSong) {
   const base = slugify(`${s.title} ${s.artist ?? ""}`) || "lagu";
   const rows = (await db()`
-    insert into songs (slug, title, artist, category, original_key, bpm, content, status, submitted_by, source_url)
+    insert into songs (slug, title, artist, category, original_key, bpm, content, status, submitted_by, source_url, genre)
     values (
       ${base} || coalesce((select '-' || (count(*) + 1) from songs where slug = ${base} or slug like ${base + "-%"} having count(*) > 0), ''),
       ${s.title}, ${s.artist}, ${s.category ?? "rohani"}, ${s.original_key}, ${s.bpm}, ${s.content},
-      ${s.status ?? "published"}, ${s.submitted_by ?? null}, ${s.source_url ?? null})
+      ${s.status ?? "published"}, ${s.submitted_by ?? null}, ${s.source_url ?? null}, ${genreFor(s)})
     returning slug`) as { slug: string }[];
   return rows[0].slug;
 }
