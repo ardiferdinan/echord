@@ -214,3 +214,12 @@ test("import: [ bracketed ] section names and • beat marks (PsalmNote)", () =>
   assert.deepEqual(s[0].lines[0].chords.map((c) => c.name), ["C", "G/B"]);
   assert.equal(s[1].lines[0].text.trim(), "Haleluya Tuhan");
 });
+
+test("chord row round trip", async () => {
+  const { toChordRow, fromChordRow } = await import("./chordpro");
+  const line = { text: "Amazing grace how sweet", chords: [{ at: 0, name: "G" }, { at: 8, name: "C" }, { at: 9, name: "D/F#" }] };
+  const rows = toChordRow(line);
+  assert.equal(rows.chords, "G       C D/F#"); // the D/F# that collides moves one space right
+  assert.deepEqual(fromChordRow("G       C", "Amazing grace  "), { text: "Amazing grace", chords: [{ at: 0, name: "G" }, { at: 8, name: "C" }] });
+  assert.deepEqual(fromChordRow("G  xx  Am", "la"), { text: "la", chords: [{ at: 0, name: "G" }, { at: 7, name: "Am" }] }); // non-chords ignored
+});

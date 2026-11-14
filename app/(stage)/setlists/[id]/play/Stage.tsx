@@ -18,11 +18,11 @@ export function LocalStage({ id }: { id: string }) {
   // a key change on stage is saved to the setlist (the editor and the PDF follow)
   const onTranspose = (itemId: string, t: number) =>
     setSetlists((all) => all.map((s) => (s.id === id ? { ...s, items: s.items.map((it) => (it.id === itemId ? { ...it, transpose: t } : it)), updatedAt: Date.now() } : s)));
-  return setlist ? <Stage setlist={setlist} backHref={`/setlists/${id}`} printHref={`/setlists/${id}/print`} onTranspose={onTranspose} /> : null;
+  return setlist ? <Stage setlist={setlist} backHref={`/setlists/${id}`} printHref={`/setlists/${id}/print`} editHref={(itemId) => `/setlists/${id}?edit=${itemId}`} onTranspose={onTranspose} /> : null;
 }
 
 /** onTranspose: save key changes (own setlist); without it (shared link) they only last while the stage is open. */
-export function Stage({ setlist, backHref, printHref, onTranspose }: { setlist: Setlist; backHref: string; printHref?: string; onTranspose?: (itemId: string, t: number) => void }) {
+export function Stage({ setlist, backHref, printHref, editHref, onTranspose }: { setlist: Setlist; backHref: string; printHref?: string; editHref?: (itemId: string) => string; onTranspose?: (itemId: string, t: number) => void }) {
   const [i, setI] = useState(0);
   const [font, setFont] = useLocal("echord:stage-font", 24);
   const [numbers, setNumbers] = useLocal("echord:numbers", false); // same choice as the song page
@@ -179,6 +179,7 @@ export function Stage({ setlist, backHref, printHref, onTranspose }: { setlist: 
                     </button>
                   )}
                   {item.artist && <span className="font-semibold">{item.artist}</span>}
+                  {editHref && <Link href={editHref(item.id)} className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-ink hover:bg-white/20">Edit lagu ini</Link>}
                 </p>
               </div>
             </header>
@@ -221,6 +222,7 @@ export function Stage({ setlist, backHref, printHref, onTranspose }: { setlist: 
           <button className="grid size-12 shrink-0 place-items-center rounded-full text-muted hover:text-ink disabled:opacity-30" disabled={i === 0} onClick={() => go(i - 1)} aria-label="Lagu sebelumnya">
             <ChevronIcon className="size-5" />
           </button>
+          {all && <span className="flex-1" />}
           {!all && (
             <>
               <button className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-full font-bold transition ${scrolling ? "bg-ink text-app" : "hover:bg-white/10"}`} onClick={() => setScrolling(!scrolling)}>
@@ -230,7 +232,7 @@ export function Stage({ setlist, backHref, printHref, onTranspose }: { setlist: 
             </>
           )}
           <button
-            className={`flex h-12 items-center justify-center gap-2 rounded-full px-4 font-bold transition ${all ? "flex-1 bg-ink text-app" : "hover:bg-white/10"}`}
+            className={`flex h-12 items-center justify-center gap-2 rounded-full px-4 font-bold transition ${all ? "bg-ink text-app" : "hover:bg-white/10"}`}
             onClick={() => {
               setScrolling(false);
               box.current?.scrollTo({ top: 0 });
@@ -239,8 +241,9 @@ export function Stage({ setlist, backHref, printHref, onTranspose }: { setlist: 
             aria-pressed={all}
             title="Tampilkan seluruh lagu dalam satu layar"
           >
-            <ExpandIcon className="size-4" /> {all ? "Semua tampil" : "Semua"}
+            <ExpandIcon className="size-4" /> Semua
           </button>
+          {all && <span className="flex-1" />}
           <button className="grid size-12 shrink-0 place-items-center rounded-full bg-brand text-on-brand hover:brightness-110 disabled:opacity-30" disabled={i >= items.length - 1} onClick={() => go(i + 1)} aria-label="Lagu berikutnya">
             <ChevronIcon dir="right" className="size-5" />
           </button>

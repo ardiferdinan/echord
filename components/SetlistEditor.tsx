@@ -3,13 +3,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
-import { SortableContext, arrayMove, horizontalListSortingStrategy, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { parseSections, transposeKey, transposeSections, type Section } from "@/lib/chordpro";
 import type { Song } from "@/lib/db";
 import { newItem, useHydrated, useSetlists, type Setlist, type SetlistItem } from "@/lib/storage";
 import { shareSetlist } from "@/app/(main)/setlists/actions";
-import { ChordSheet, SECTION_COLOR } from "./ChordSheet";
+import { FlowEditor } from "./FlowEditor";
 import { TransposeControl } from "./Controls";
 import { Mosaic } from "./shell/Mosaic";
 import { PlayIcon, TrashIcon } from "./icons";
@@ -131,8 +131,8 @@ export function SetlistEditor({ id }: { id: string }) {
 
 function SongCard({ item, n, onChange, onRemove }: { item: SetlistItem; n: number; onChange: (p: Partial<SetlistItem>) => void; onRemove: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const [open, setOpen] = useState(() => new URLSearchParams(window.location.search).get("edit") === item.id); // from stage's "Edit lagu ini"; items render client-side only
+  const [raw, setRaw] = useState(false); // advanced: the ChordPro text itself
   const sections = useMemo(() => parseSections(item.content), [item.content]);
   const byId = new Map(sections.map((s) => [s.id, s]));
 
@@ -165,110 +165,40 @@ function SongCard({ item, n, onChange, onRemove }: { item: SetlistItem; n: numbe
 
       {open && (
         <div className="px-3 pb-5 pt-2 sm:pl-[104px]">
-          <SectionArranger sections={sections} order={item.order} onChange={(order) => onChange({ order })} />
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button className="btn" onClick={() => setEditing(!editing)}>{editing ? "Selesai edit" : "✎ Edit chord & lirik"}</button>
-            <button className="btn" onClick={() => onChange({ order: sections.map((s) => s.id) })}>Reset urutan</button>
-            <Link href={`/songs/${item.slug}`} className="btn">Lagu asli</Link>
-            <button className="btn ml-auto border-hot/50 text-hot hover:border-hot" onClick={() => confirm(`Hapus "${item.title}" dari setlist?`) && onRemove()}>Hapus dari setlist</button>
-          </div>
+          <p className="mb-2 text-xs text-muted">Geser penanda untuk mengubah alur · klik baris untuk edit chord & lirik · klik dua kali penanda untuk ganti nama.</p>
+          <FlowEditor item={item} onChange={onChange} />
 
           <textarea
             value={item.notes ?? ""}
             onChange={(e) => onChange({ notes: e.target.value })}
             placeholder="Catatan (mis. drum masuk di Reff 2, ending ritardando)…"
             rows={1}
-            className="input h-auto py-3 mt-3 resize-y"
+            className="input mt-4 h-auto resize-y py-3"
           />
 
-          <div className={`mt-4 grid gap-4 ${editing ? "lg:grid-cols-2" : ""}`}>
-            {editing && (
-              <textarea
-                defaultValue={item.content}
-                onChange={(e) => {
-                  const content = e.target.value;
-                  const ids = parseSections(content).map((s) => s.id);
-                  const same = ids.length === sections.length;
-                  onChange({ content, order: same ? item.order : ids });
-                }}
-                spellCheck={false}
-                className="input h-auto py-3 min-h-96 font-mono text-base leading-relaxed sm:text-[13px]"
-                aria-label="ChordPro"
-              />
-            )}
-            <div className="rounded-md bg-black/30 p-4">
-              <ChordSheet sections={arranged(item)} fontSize={15} />
-            </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button className="btn" onClick={() => onChange({ order: sections.map((s) => s.id) })}>Reset alur</button>
+            <Link href={`/songs/${item.slug}`} className="btn">Lagu asli</Link>
+            <button className="btn" onClick={() => setRaw(!raw)} aria-expanded={raw}>{raw ? "Tutup teks ChordPro" : "Teks ChordPro"}</button>
+            <button className="btn ml-auto border-hot/50 text-hot hover:border-hot" onClick={() => confirm(`Hapus "${item.title}" dari setlist?`) && onRemove()}>Hapus dari setlist</button>
           </div>
+
+          {raw && (
+            <textarea
+              value={item.content}
+              onChange={(e) => {
+                const content = e.target.value;
+                const ids = parseSections(content).map((s) => s.id);
+                onChange({ content, order: ids.length === sections.length ? item.order : ids });
+              }}
+              spellCheck={false}
+              className="input mt-3 h-auto min-h-80 py-3 font-mono text-base leading-relaxed sm:text-[13px]"
+              aria-label="Teks ChordPro (lanjutan)"
+            />
+          )}
         </div>
       )}
     </li>
-  );
-}
-
-function SectionArranger({ sections, order, onChange }: { sections: Section[]; order: string[]; onChange: (o: string[]) => void }) {
-  const sensors = useDnd();
-  const byId = new Map(sections.map((s) => [s.id, s]));
-  const keys = order.map((id, i) => `${i}:${id}`);
-
-  const onDragEnd = ({ active, over }: DragEndEvent) => {
-    if (!over || active.id === over.id) return;
-    onChange(arrayMove(order, keys.indexOf(String(active.id)), keys.indexOf(String(over.id))));
-  };
-
-  return (
-    <div>
-      <p className="mb-2 text-xs text-muted">Geser untuk mengatur alur lagu. ⧉ ulangi section, ✕ lewati.</p>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-        <SortableContext items={keys} strategy={horizontalListSortingStrategy}>
-          <div className="flex flex-wrap items-center gap-2">
-            {order.map((id, i) => {
-              const s = byId.get(id);
-              if (!s) return null;
-              return (
-                <Chip
-                  key={keys[i]}
-                  id={keys[i]}
-                  s={s}
-                  onDup={() => onChange([...order.slice(0, i + 1), id, ...order.slice(i + 1)])}
-                  onRemove={() => onChange(order.filter((_, k) => k !== i))}
-                />
-              );
-            })}
-            <select
-              value=""
-              onChange={(e) => e.target.value && onChange([...order, e.target.value])}
-              className="h-10 rounded-full bg-surface-2 px-4 text-sm font-semibold text-muted"
-              aria-label="Tambah section"
-            >
-              <option value="">+ section</option>
-              {sections.map((s) => (
-                <option key={s.id} value={s.id}>{s.label}</option>
-              ))}
-            </select>
-          </div>
-        </SortableContext>
-      </DndContext>
-    </div>
-  );
-}
-
-function Chip({ id, s, onDup, onRemove }: { id: string; s: Section; onDup: () => void; onRemove: () => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
-  const color = SECTION_COLOR[s.type];
-  return (
-    <span
-      ref={setNodeRef}
-      style={{ transform: CSS.Translate.toString(transform), transition, borderColor: color }}
-      className={`inline-flex h-10 items-center rounded-full border-2 bg-black/30 text-sm ${isDragging ? "z-10 shadow-lg" : ""}`}
-    >
-      <button {...attributes} {...listeners} className="h-full cursor-grab touch-none pl-4 pr-1 font-semibold active:cursor-grabbing" style={{ color }}>
-        {s.label}
-      </button>
-      <button onClick={onDup} className="grid h-full w-8 place-items-center text-muted hover:text-ink" aria-label={`Ulangi ${s.label}`} title="Ulangi">⧉</button>
-      <button onClick={onRemove} className="grid h-full w-9 place-items-center pr-1 text-muted hover:text-hot" aria-label={`Lewati ${s.label}`} title="Lewati">✕</button>
-    </span>
   );
 }
 

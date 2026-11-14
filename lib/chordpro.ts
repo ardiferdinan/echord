@@ -293,3 +293,24 @@ export function syllables(word: string): { at: number; s: string }[] {
   }
   return out;
 }
+
+// ---------- chords-over-lyrics rows (the visual line editor) ----------
+/** A line as two monospace rows: chord names placed over the character they sit on. */
+export function toChordRow(l: Line): { chords: string; text: string } {
+  let row = "";
+  for (const c of [...l.chords].sort((a, b) => a.at - b.at)) {
+    const at = Math.max(c.at, row.length ? row.length + 1 : 0); // keep a space between neighbours
+    row = row.padEnd(at, " ") + c.name;
+  }
+  return { chords: row, text: l.text };
+}
+
+/** Back from two rows: every chord name in the top row sits on the character below its first letter. */
+export function fromChordRow(chords: string, text: string): Line {
+  const out: ChordAt[] = [];
+  chords.replace(/\S+/g, (name, at: number) => {
+    if (isChord(name)) out.push({ at, name });
+    return name;
+  });
+  return { text: text.replace(/\s+$/, ""), chords: out };
+}
