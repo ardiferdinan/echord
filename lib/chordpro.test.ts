@@ -121,6 +121,12 @@ test("shared setlist is sanitized", async () => {
   assert.deepEqual(s.items[0].order, ["s0", ""]);
   assert.equal("evil" in s.items[0], false);
   assert.throws(() => sanitize({ items: "nope" } as never));
+  const { cover } = await import("./share");
+  assert.equal(cover("https://is1-ssl.mzstatic.com/image/x.jpg"), "https://is1-ssl.mzstatic.com/image/x.jpg");
+  assert.equal(cover("https://e-cdns-images.dzcdn.net/a.jpg"), "https://e-cdns-images.dzcdn.net/a.jpg");
+  assert.equal(cover("https://evil.example/mzstatic.com.jpg"), null);
+  assert.equal(cover("http://is1-ssl.mzstatic.com/x.jpg"), null);
+  assert.equal(cover("javascript:alert(1)"), null);
 });
 
 test("chord library: every root × quality has guitar voicings and piano inversions", async () => {

@@ -1,5 +1,5 @@
 "use client";
-import { useId, useMemo, useState } from "react";
+import { Fragment, useId, useMemo, useState } from "react";
 import { DndContext, closestCenter, type DragEndEvent, PointerSensor, KeyboardSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -129,6 +129,20 @@ function Part({ sortId, s, group, collapsible, onToggle, onCount, onSave, onMove
   const expanded = !group.collapsed;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: sortId });
   const [editing, setEditing] = useState<number | null>(null);
+  // a new line being typed, to go in at this index; blank lines are not stored, so it is only saved once it has content
+  const [adding, setAdding] = useState<number | null>(null);
+  const blank = (l: Line) => !l.text.trim() && !l.chords.length;
+  const insert = (at: number, l: Line) => setLines([...s.lines.slice(0, at), l, ...s.lines.slice(at)]);
+  const draft = (at: number) => (
+    <LineEditor
+      key={"new" + at}
+      line={{ text: "", chords: [] }}
+      onSave={(nl) => { if (!blank(nl)) insert(at, nl); setAdding(null); }}
+      onAddBelow={(nl) => { if (!blank(nl)) { insert(at, nl); setAdding(at + 1); } }}
+      onDelete={() => setAdding(null)}
+      onCancel={() => setAdding(null)}
+    />
+  );
   const [naming, setNaming] = useState(false);
   const setLines = (lines: Line[]) => onSave({ ...s, lines });
 
@@ -181,13 +195,15 @@ function Part({ sortId, s, group, collapsible, onToggle, onCount, onSave, onMove
 
       {expanded && (
         <div className="mt-1 space-y-1 text-[16px] leading-tight">
-          {s.lines.map((l, k) =>
-            editing === k ? (
+          {adding === 0 && draft(0)}
+          {s.lines.map((l, k) => (
+            <Fragment key={k}>
+            {editing === k ? (
               <LineEditor
                 key={k}
                 line={l}
                 onSave={(nl) => { setLines(s.lines.map((x, j) => (j === k ? nl : x))); setEditing(null); }}
-                onAddBelow={(nl) => { setLines([...s.lines.slice(0, k), nl, { text: "", chords: [] }, ...s.lines.slice(k + 1)]); setEditing(k + 1); }}
+                onAddBelow={(nl) => { setLines(s.lines.map((x, j) => (j === k ? nl : x))); setEditing(null); setAdding(k + 1); }}
                 onDelete={() => { setLines(s.lines.filter((_, j) => j !== k)); setEditing(null); }}
                 onCancel={() => setEditing(null)}
               />
@@ -197,12 +213,14 @@ function Part({ sortId, s, group, collapsible, onToggle, onCount, onSave, onMove
                 line={l}
                 options={options}
                 onChord={(at, name) => setLines(s.lines.map((x, j) => (j === k ? withChord(x, at, name) : x)))}
-                onEdit={() => setEditing(k)}
+                onEdit={() => (setAdding(null), setEditing(k))}
               />
-            ),
-          )}
-          {!s.lines.length && (
-            <button type="button" onClick={() => setLines([{ text: "", chords: [] }])} className="px-1 text-sm text-muted hover:text-ink">+ Tambah baris</button>
+            )}
+            {adding === k + 1 && draft(k + 1)}
+            </Fragment>
+          ))}
+          {adding === null && editing === null && (
+            <button type="button" onClick={() => setAdding(s.lines.length)} className="px-1 text-sm text-muted opacity-0 transition hover:text-ink focus:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100">+ Tambah baris</button>
           )}
         </div>
       )}

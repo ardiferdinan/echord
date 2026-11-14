@@ -2,6 +2,16 @@ import type { Setlist, SetlistItem } from "./storage";
 
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
 
+/** A cover only from the hosts next.config allows for images (iTunes / Deezer); anything else is dropped. */
+export function cover(v: unknown): string | null {
+  try {
+    const u = new URL(str(v, 500));
+    return u.protocol === "https:" && /(^|\.)(mzstatic\.com|dzcdn\.net)$/.test(u.hostname) ? u.href : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Whitelist + clamp everything coming from the browser before it is stored and shown to others. */
 export function sanitize(s: Setlist): Omit<Setlist, "share" | "sharedAt"> {
   if (!s || typeof s !== "object" || !Array.isArray(s.items)) throw new Error("Setlist tidak valid.");
@@ -26,6 +36,7 @@ function item(i: SetlistItem, top: boolean): SetlistItem {
     transpose: Math.max(-11, Math.min(11, Math.trunc(Number(i.transpose) || 0))),
     order: Array.isArray(i.order) ? i.order.slice(0, 100).map((o) => str(o, 10)) : [],
     notes: str(i.notes, 2000) || undefined,
+    artwork: cover(i.artwork),
     // a medley's songs (one level deep)
     parts: top && Array.isArray(i.parts) ? i.parts.slice(0, 12).map((p) => item(p, false)) : undefined,
   };

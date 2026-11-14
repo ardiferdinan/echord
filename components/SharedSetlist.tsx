@@ -49,9 +49,10 @@ export function SharedSetlist({ setlist, shareId }: { setlist: Setlist; shareId:
             <li key={item.id} className={`rounded-md transition ${open === item.id ? "bg-white/5" : "hover:bg-white/10"}`}>
               <button className="flex w-full items-center gap-3 p-3 text-left" onClick={() => setOpen(open === item.id ? null : item.id)} aria-expanded={open === item.id}>
                 <span className="w-5 text-right text-sm tabular-nums text-muted">{n + 1}</span>
+                <Mosaic covers={item.parts?.length ? item.parts.map((x) => x.artwork) : [item.artwork]} className="size-11" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{item.title}</span>
-                  <span className="block truncate text-xs text-muted">{sections.map((s) => s.label).join(" → ")}</span>
+                  <span className="block truncate text-xs text-muted">{sections.filter((s) => !s.heading).map((s) => s.label).join(" → ")}</span>
                 </span>
                 {key && <span className="text-sm font-bold text-accent">{key}</span>}
               </button>

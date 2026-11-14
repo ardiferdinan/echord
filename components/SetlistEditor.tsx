@@ -408,6 +408,10 @@ function ShareButton({ setlist, onShared }: { setlist: Setlist; onShared: (share
               Kirim via WhatsApp / lainnya
             </button>
           )}
+          {/* links made before covers were shared (or anything else was added) get today's version */}
+          <button className="mt-2 w-full text-xs font-semibold text-muted hover:text-ink hover:underline" onClick={() => share()} disabled={busy}>
+            {busy ? "Memperbarui…" : "Perbarui isi link (cover, chord terbaru)"}
+          </button>
           <p className="mt-2 text-xs text-muted">Kalau kamu ubah setlist, klik <b>Update link band</b>. Link tetap sama, anggota tinggal refresh.</p>
         </div>
       )}
