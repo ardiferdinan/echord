@@ -11,8 +11,10 @@ export function LoginForm({ next }: { next: Promise<string> }) {
       <h1 className="mt-6 text-3xl font-black tracking-[-0.03em]">Masuk ke Echord</h1>
       <p className="mt-2 text-sm text-muted">Perpustakaan chord pribadi.</p>
       <input type="hidden" name="next" value={use(next)} />
-      <label className="mt-8 block text-left text-sm font-bold" htmlFor="password">Password</label>
-      <input id="password" type="password" name="password" required autoFocus autoComplete="current-password" className="input mt-2" />
+      <label className="mt-8 block text-left text-sm font-bold" htmlFor="login">Username atau email</label>
+      <input id="login" name="login" required autoFocus autoComplete="username" autoCapitalize="none" spellCheck={false} className="input mt-2" />
+      <label className="mt-4 block text-left text-sm font-bold" htmlFor="password">Password</label>
+      <input id="password" type="password" name="password" required autoComplete="current-password" className="input mt-2" />
       {error && <p className="mt-3 text-left text-sm text-hot" role="alert">{error}</p>}
       <button disabled={pending} className="btn btn-primary mt-6 h-12 w-full text-base sm:h-12">{pending ? "Masuk…" : "Masuk"}</button>
     </form>

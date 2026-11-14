@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { uid, useHydrated, useSetlists } from "@/lib/storage";
 import { ActiveLink } from "../NavLink";
+import { useMe } from "@/lib/me";
 import { ChordIcon, HomeIcon, LibraryIcon, Mark, PlusIcon, SearchIcon } from "../icons";
 import { Mosaic } from "./Mosaic";
 
@@ -13,6 +14,7 @@ const item = (on: boolean) => `flex items-center gap-3 rounded-md p-2 transition
 export function Sidebar() {
   const [setlists, setSetlists] = useSetlists();
   const hydrated = useHydrated();
+  const me = useMe(); // adding songs to the library: super admin only
   const router = useRouter();
   const create = () => {
     const id = uid();
@@ -75,7 +77,7 @@ export function Sidebar() {
             </li>
           )}
         </ul>
-        <div className="border-t border-line p-2">
+        {me?.role === "superadmin" && <div className="border-t border-line p-2">
           <ActiveLink href="/admin/new" className={item}>
             {() => (
               <>
@@ -84,7 +86,7 @@ export function Sidebar() {
               </>
             )}
           </ActiveLink>
-        </div>
+        </div>}
       </div>
     </nav>
   );

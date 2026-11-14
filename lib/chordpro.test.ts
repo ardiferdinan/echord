@@ -251,3 +251,17 @@ test("medley presets", async () => {
   assert.equal(presetOf(s, ["s2"]), "chorus");
   assert.equal(presetOf(s, ["s2", "s2"]), "custom");
 });
+
+test("sessions and passwords", async () => {
+  process.env.SESSION_SECRET = "test-secret";
+  const { sessionToken, sessionUser } = await import("./auth");
+  const t = await sessionToken(7, 1000);
+  assert.equal(await sessionUser(t, 2000), 7);
+  assert.equal(await sessionUser(t.replace(/^7\./, "1."), 2000), null); // another user id with the same signature
+  assert.equal(await sessionUser(t, 1000 + 31 * 864e5), null); // expired
+  assert.equal(await sessionUser("garbage", 0), null);
+  const { hashPassword, verifyPassword } = await import("./users");
+  const h = await hashPassword("rahasia-123");
+  assert.ok(await verifyPassword("rahasia-123", h));
+  assert.equal(await verifyPassword("rahasia-124", h), false);
+});

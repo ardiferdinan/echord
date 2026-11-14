@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { insertSong } from "@/lib/db";
-import { requireAuth } from "@/app/login/actions";
+import { requireAdmin } from "@/lib/session";
 
 type SongInput = { title: string; artist: string; originalKey: string; bpm: string; content: string };
 
@@ -23,7 +23,7 @@ function clean(input: SongInput) {
 }
 
 export async function saveSong(input: SongInput): Promise<{ slug?: string; error?: string }> {
-  await requireAuth();
+  await requireAdmin();
   const c = clean(input);
   if (!c.song) return { error: c.error };
   try {

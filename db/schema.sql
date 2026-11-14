@@ -40,3 +40,19 @@ create table if not exists shared_setlists (
   data jsonb not null,
   updated_at timestamptz not null default now()
 );
+
+-- accounts (lib/users.ts creates these on first login too); only the super admin creates accounts
+create table if not exists users (
+  id serial primary key,
+  username text unique not null,
+  email text unique,
+  password_hash text not null, -- scrypt$salt$hash
+  role text not null default 'member', -- 'superadmin' | 'member'
+  created_at timestamptz not null default now()
+);
+-- each account's setlists, synced from the browser (components/SetlistSync.tsx)
+create table if not exists user_setlists (
+  user_id int primary key references users(id) on delete cascade,
+  data jsonb not null default '[]',
+  updated_at timestamptz not null default now()
+);

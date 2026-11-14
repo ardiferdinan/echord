@@ -1,7 +1,7 @@
 "use server";
 import { randomBytes, randomUUID } from "node:crypto";
 import { saveShared } from "@/lib/db";
-import { requireAuth } from "@/app/login/actions";
+import { requireAuth } from "@/lib/session";
 import { sanitize } from "@/lib/share";
 import type { Setlist } from "@/lib/storage";
 

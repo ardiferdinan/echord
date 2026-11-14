@@ -3,7 +3,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { logout } from "@/app/login/actions";
-import { ChevronIcon, LogoutIcon, Mark, SearchIcon } from "../icons";
+import { forgetMe, useMe } from "@/lib/me";
+import { clearLocalSetlists, pushSetlists } from "../SetlistSync";
+import { Popover, menuItem } from "../Popover";
+import { ChevronIcon, LogoutIcon, Mark, SearchIcon, UserIcon } from "../icons";
 
 /** Sticky bar at the top of the main panel: history arrows, the search pill, sign out. */
 export function TopBar() {
@@ -26,12 +29,45 @@ export function TopBar() {
       <Suspense fallback={<Search q="" />}>
         <SearchFromUrl />
       </Suspense>
-      <form action={logout} className="ml-auto">
-        <button className="grid size-10 place-items-center rounded-full bg-black/70 text-muted transition hover:scale-[1.06] hover:text-ink" aria-label="Keluar" title="Keluar">
-          <LogoutIcon className="size-5" />
-        </button>
-      </form>
+      <AccountMenu />
     </header>
+  );
+}
+
+/** Avatar with the account's initial: my account, manage accounts (super admin), sign out. */
+function AccountMenu() {
+  const me = useMe();
+  const [leaving, setLeaving] = useState(false);
+  const signOut = async () => {
+    setLeaving(true);
+    await pushSetlists(); // last edits reach the account before this browser forgets them
+    clearLocalSetlists();
+    forgetMe();
+    await logout();
+  };
+  return (
+    <div className="ml-auto">
+      <Popover
+        label="Akun"
+        buttonClass="grid size-10 place-items-center rounded-full bg-black/70 p-1 transition hover:scale-[1.06]"
+        button={<span className="grid size-8 place-items-center rounded-full bg-[#1ed760] text-sm font-black uppercase text-black">{me?.username?.[0] ?? <UserIcon className="size-4" />}</span>}
+        panelClass="w-64"
+      >
+        {(close) => (
+          <ul role="menu">
+            {me && (
+              <li className="border-b border-white/10 px-3 pb-2 pt-1.5">
+                <p className="truncate font-bold">{me.username}</p>
+                <p className="truncate text-xs text-muted">{me.email ?? (me.role === "superadmin" ? "Super admin" : "Member")}</p>
+              </li>
+            )}
+            <li><Link role="menuitem" href="/akun" onClick={close} className={menuItem}><UserIcon className="size-5" />Akun saya</Link></li>
+            {me?.role === "superadmin" && <li><Link role="menuitem" href="/admin/users" onClick={close} className={menuItem}><UserIcon className="size-5" />Kelola akun</Link></li>}
+            <li><button type="button" role="menuitem" onClick={signOut} disabled={leaving} className={menuItem}><LogoutIcon className="size-5" />{leaving ? "Keluar…" : "Keluar"}</button></li>
+          </ul>
+        )}
+      </Popover>
+    </div>
   );
 }
 

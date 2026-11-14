@@ -7,6 +7,7 @@ import type { Song, Version } from "@/lib/db";
 import { useRouter } from "next/navigation";
 import { makePrimary } from "./actions";
 import { sourceName } from "@/lib/sources";
+import { useMe } from "@/lib/me";
 import { useBandContext, useLocal } from "@/lib/storage";
 import { BandContextPicker, ChordSheet } from "@/components/ChordSheet";
 import { FontControl, NumbersControl, TransposeControl } from "@/components/Controls";
@@ -24,6 +25,7 @@ export function SongView({ song: base, versions = [] }: { song: Song; versions?:
   const v = versions[vi];
   const song: Song = v ? { ...base, content: v.content, original_key: v.original_key, bpm: v.bpm, source_url: v.source_url } : base;
   const router = useRouter();
+  const me = useMe(); // changing the library's default source: super admin only
   const [swapping, setSwapping] = useState(false);
   const [swapError, setSwapError] = useState("");
   const pickVersion = (i: number) => {
@@ -119,7 +121,7 @@ export function SongView({ song: base, versions = [] }: { song: Song; versions?:
               {i === 0 && <span className="ml-1 text-[11px] font-semibold opacity-70">utama</span>}
             </button>
           ))}
-          {vi > 0 && (
+          {vi > 0 && me?.role === "superadmin" && (
             <button type="button" onClick={primary} disabled={swapping} className="btn h-8 px-3 text-xs sm:h-8" title="Versi ini yang tampil pertama dan dipakai di setlist">
               {swapping ? "Menyimpan…" : "Jadikan utama"}
             </button>
