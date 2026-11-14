@@ -223,3 +223,15 @@ test("chord row round trip", async () => {
   assert.deepEqual(fromChordRow("G       C", "Amazing grace  "), { text: "Amazing grace", chords: [{ at: 0, name: "G" }, { at: 8, name: "C" }] });
   assert.deepEqual(fromChordRow("G  xx  Am", "la"), { text: "la", chords: [{ at: 0, name: "G" }, { at: 7, name: "Am" }] }); // non-chords ignored
 });
+
+test("line slots cut at chords that sit mid-syllable or on a space", async () => {
+  const { lineSlots, fromChordRow } = await import("./chordpro");
+  const l = fromChordRow("G       D/F#         E", "Gunung-gunung yang tinggi.");
+  const { items, after } = lineSlots(l);
+  const starts = items.flatMap((x) => ("word" in x ? x.word.map((p) => p.at) : [x.space]));
+  for (const c of l.chords) assert.ok(starts.includes(c.at), `chord ${c.name} at ${c.at} has a slot`);
+  assert.equal(items.flatMap((x) => ("word" in x ? x.word.map((p) => p.s) : [])).join(""), "Gunung-gunungyangtinggi."); // nothing lost
+  assert.deepEqual(after, []);
+  assert.deepEqual(lineSlots(fromChordRow("C     G", "la")).after, [6]);
+  assert.ok(lineSlots(fromChordRow("   C", "ku  cinta")).items.some((x) => "space" in x && x.space === 3));
+});

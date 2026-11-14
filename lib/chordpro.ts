@@ -319,3 +319,25 @@ export function fromChordRow(chords: string, text: string): Line {
   });
   return { text: text.replace(/\s+$/, ""), chords: out };
 }
+
+export type LinePiece = { at: number; s: string };
+/**
+ * Click targets for a lyric line: each word as syllables, also cut wherever a chord sits mid-syllable
+ * (chords typed in the two-row editor can land on any letter); chords over a space get their own slot,
+ * chords past the end of the text come back separately.
+ */
+export function lineSlots(l: Line): { items: ({ word: LinePiece[] } | { space: number })[]; after: number[] } {
+  const cuts = l.chords.map((c) => c.at).filter((at) => at < l.text.length);
+  const items: ({ word: LinePiece[]; at: number } | { space: number; at: number })[] = [];
+  for (const m of l.text.matchAll(/\S+/g)) {
+    let pieces = syllables(m[0]).map((x) => ({ at: m.index! + x.at, s: x.s }));
+    for (const p of cuts) {
+      const i = pieces.findIndex((x) => x.at < p && p < x.at + x.s.length);
+      if (i >= 0) pieces = [...pieces.slice(0, i), { at: pieces[i].at, s: pieces[i].s.slice(0, p - pieces[i].at) }, { at: p, s: pieces[i].s.slice(p - pieces[i].at) }, ...pieces.slice(i + 1)];
+    }
+    items.push({ word: pieces, at: m.index! });
+  }
+  for (const p of cuts) if (/\s/.test(l.text[p])) items.push({ space: p, at: p });
+  items.sort((a, b) => a.at - b.at);
+  return { items: items.map((x) => ("word" in x ? { word: x.word } : { space: x.space })), after: l.chords.map((c) => c.at).filter((at) => at >= l.text.length) };
+}

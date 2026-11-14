@@ -3,7 +3,7 @@ import { useId, useMemo, useState } from "react";
 import { DndContext, closestCenter, type DragEndEvent, PointerSensor, KeyboardSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { diatonic, flowCollapsed, flowId, fromChordRow, parseSections, serialize, syllables, toChordRow, transposeChord, transposeKey, transposeSections, typeOfLabel, uniqueChords, type Line, type Section } from "@/lib/chordpro";
+import { diatonic, flowCollapsed, flowId, fromChordRow, lineSlots, parseSections, serialize, toChordRow, transposeChord, transposeKey, transposeSections, typeOfLabel, uniqueChords, type Line, type Section } from "@/lib/chordpro";
 import type { SetlistItem } from "@/lib/storage";
 import { SectionLabel, useSheetColors } from "./ChordSheet";
 import { ChevronIcon, CopyIcon, DotsIcon, PencilIcon } from "./icons";
@@ -249,10 +249,8 @@ function withChord(l: Line, at: number, name: string): Line {
 function SyllableLine({ line, options, onChord, onEdit }: { line: Line; options: string[]; onChord: (at: number, name: string) => void; onEdit: () => void }) {
   const [pick, setPick] = useState<{ at: number; value: string } | null>(null);
   const list = useId();
-  const words = [...line.text.matchAll(/\S+/g)].map((m) => syllables(m[0]).map((x) => ({ at: m.index! + x.at, s: x.s })));
-  const starts = new Set(words.flat().map((x) => x.at));
+  const { items, after } = lineSlots(line);
   const chordAt = (at: number) => line.chords.find((c) => c.at === at)?.name;
-  const loose = line.chords.filter((c) => !starts.has(c.at)); // chord-only lines, chords past the end
   const end = Math.max(line.text.length + 1, ...line.chords.map((c) => c.at + 1));
   const commit = (name: string) => {
     if (pick && name !== (chordAt(pick.at) ?? "")) onChord(pick.at, name);
@@ -290,17 +288,25 @@ function SyllableLine({ line, options, onChord, onEdit }: { line: Line; options:
   return (
     <div className="group/line rounded px-1 hover:bg-white/[.04]">
       <div className="flex flex-wrap items-end">
-        {words.map((w, i) => (
-          <span key={i} className="mr-[0.3em] inline-flex items-end">
-            {segs(w).map((g) => (
-              <span key={g[0].at} className="inline-flex flex-col">
-                {chordCell(g[0].at)}
-                <span>{g.map((x) => syl(x.at, x.s))}</span>
-              </span>
-            ))}
-          </span>
-        ))}
-        {[...loose.map((c) => c.at), ...(loose.some((c) => c.at === end) ? [] : [end])].map((at) => (
+        {items.map((it) =>
+          "word" in it ? (
+            <span key={it.word[0].at} className="mr-[0.3em] inline-flex items-end">
+              {segs(it.word).map((g) => (
+                <span key={g[0].at} className="inline-flex flex-col">
+                  {chordCell(g[0].at)}
+                  <span>{g.map((x) => syl(x.at, x.s))}</span>
+                </span>
+              ))}
+            </span>
+          ) : (
+            // a chord over a space between words
+            <span key={"sp" + it.space} className="mr-[0.3em] inline-flex flex-col">
+              {chordCell(it.space)}
+              <span>{syl(it.space, "\u00a0")}</span>
+            </span>
+          ),
+        )}
+        {[...after, ...(after.includes(end) ? [] : [end])].map((at) => (
           <span key={"x" + at} className="inline-flex flex-col">
             {chordCell(at)}
             <span>{syl(at, at === end && !chordAt(at) ? <span className="px-0.5 text-muted opacity-0 group-hover/line:opacity-100">+</span> : <span className="text-muted">·</span>)}</span>
