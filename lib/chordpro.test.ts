@@ -278,3 +278,14 @@ test("import: part tags like [Chorus] are not ChordPro; bars, rhythm dots and al
   assert.ok(!/[|•]|Emaj7|E\(C#m\)/.test(text), "no chord left in the lyrics: " + text);
   assert.deepEqual(secs.map((s) => s.label), ["Intro", "Chorus", "Bridge"]);
 });
+
+test("import: nested part tags, repeat signs, bracketed notes in lyrics", async () => {
+  const { importText, parseSections, isChord } = await import("./chordpro");
+  const raw = "[ Verse [English] ]\nG       C\nAmazing grace\n\n[ Chorus ]\n||: Bb | Dm | F/C | Am:||\nD     G   D:||\nla la [Back to verse]\n";
+  const secs = parseSections(importText(raw).content);
+  assert.deepEqual(secs.map((s) => s.label), ["Verse (English)", "Chorus"]);
+  const chords = secs.flatMap((s) => s.lines.flatMap((l) => l.chords.map((c) => c.name)));
+  assert.ok(chords.every(isChord), "only real chords: " + chords.join(" "));
+  assert.deepEqual(chords, ["G", "C", "Bb", "Dm", "F/C", "Am", "D", "G", "D"]);
+  assert.ok(secs[1].lines.some((l) => l.text.includes("(Back to verse)")));
+});

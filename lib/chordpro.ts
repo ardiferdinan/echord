@@ -58,8 +58,11 @@ export function transposeChord(chord: string, semis: number, targetKey?: string)
 const HEADER_RE =
   /^\s*[\[(]?\s*(intro|verse|bait|ayat|stanza|reff?|refrain|chorus|pre[- ]?chorus|pre[- ]?reff?|bridge|jembatan|int\.?|interlude|instrumental|musik|coda|outro|ending|tag)\s*(\d*)\s*[\])]?\s*(?:[:.\-]\s*|\s+|$)(.*)$/i;
 
-// a whole line in square brackets is a section name, whatever it says
-const BRACKET_TAG = /^\s*\[\s*([^\][]{1,40}?)\s*\]\s*$/;
+// a whole line in square brackets is a section name, whatever it says ("[ Verse [English] ]" too: one level of nesting)
+const BRACKET_TAG = /^\s*\[\s*((?:[^\][]|\[[^\][]*\]){1,60}?)\s*\]\s*$/;
+// plain-text lyrics never hold chords in brackets (those come from chord lines): "[English]" -> "(English)",
+// so the stored ChordPro does not read it back as a chord
+const noBrackets = (t: string) => t.replace(/\[([^\][]*)\]/g, "($1)").replace(/\[/g, "(").replace(/\]/g, ")");
 
 export function typeOfLabel(label: string): SectionType {
   const l = label.toLowerCase();
@@ -183,7 +186,7 @@ const CHORD_LINE_NOISE = /^(\||\/|-+|x\d+|\d+x|\(|\)|\.+|•|%|:)$/i;
 
 /** A chord as written in a chord line: "Emaj7." / "Ab///" (rhythm dots and slashes), "E(C#m)" (an alternative in brackets). */
 function chordWord(raw: string) {
-  let t = raw.replace(/[.\/•,]+$/, "");
+  let t = raw.replace(/^:+/, "").replace(/[.\/•,;:]+$/, ""); // repeat signs "||: G" / "D:||" and "A:"
   if (!t.includes("(") || t.startsWith("(")) t = t.replace(/^\(+|\)+$/g, ""); // "(Am", "G)", "(Am)"
   if (isChord(t)) return t;
   const alt = t.match(/^(.+?)\(([^)]+)\)$/); // E(C#m): play E (C#m is the alternative)
@@ -252,7 +255,7 @@ export function importText(raw: string): Imported {
     const line = lines[i];
     const tag = !chordTokens(line) && line.match(BRACKET_TAG);
     if (tag) {
-      open(tag[1].replace(/\s+/g, " ")); // "[ Chorus (Overtone) ]", "[ Turnaround ]": label as written
+      open(noBrackets(tag[1]).replace(/\s+/g, " ")); // "[ Chorus (Overtone) ]", "[ Verse [English] ]": label as written
       continue;
     }
     const header = !chordTokens(line) && line.match(HEADER_RE);
@@ -272,14 +275,14 @@ export function importText(raw: string): Imported {
     }
     const ch = chordTokens(line);
     if (!ch) {
-      push({ text: line.replace(/\s+$/, ""), chords: [] });
+      push({ text: noBrackets(line.replace(/\s+$/, "")), chords: [] });
       continue;
     }
     const next = lines[i + 1];
     if (next !== undefined && next.trim() && !chordTokens(next) && !(HEADER_RE.test(next) && !chordTokens(next))) {
       // merge chord line with lyric line below it, by column
       const lastAt = ch.at(-1)!.at;
-      const text = next.replace(/\s+$/, "");
+      const text = noBrackets(next.replace(/\s+$/, ""));
       push({ text: lastAt > text.length ? text.padEnd(lastAt, " ") : text, chords: ch });
       i++;
     } else {
