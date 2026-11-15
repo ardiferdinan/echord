@@ -9,4 +9,5 @@ test("genre: hymn number, then iTunes, then artist, else pop", () => {
   assert.equal(genreFor({ title: "X", artist: "Hillsong UNITED" }), "rock-alternatif");
   assert.equal(genreFor({ title: "X", artist: "Michael Bublé", itunesGenre: "Holiday" }), "pop-jazz");
   assert.equal(genreFor({ title: "X", artist: null }), null);
+  assert.equal(genreFor({ title: "Tuhan Berada di Bait Suci-Nya (KPPK 1)", artist: "KPPK" }), "hymne");
 });

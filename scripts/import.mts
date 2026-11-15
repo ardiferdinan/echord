@@ -32,8 +32,11 @@ if (jsonl) {
     .filter((h) => !h.version_of)
     .map((h) => ({ id: h.id, title: h.title, artist: h.artist, host: h.source_url ? new URL(h.source_url).host : "" }));
   const named = (a: string | null) => (a && norm(a) ? a : null); // "-" = no artist
+  // hymn numbers ("Haleluya (KPPK 10)" vs "(KPPK 11)") tell apart songs whose titles read the same
+  const num = (t: string) => t.match(/\((?:kj|nkb|pkj|kpri|kppk|mb|be)\s*\.?\s*(\d+)\)/i)?.[0].toLowerCase().replace(/\s+/g, "");
+  const sameNum = (a: string, b: string) => !num(a) || !num(b) || num(a) === num(b);
   const match = (r: Row) =>
-    have.find((h) => similar(norm(h.title), norm(r.title)) >= 0.9 && (!named(h.artist) || !named(r.artist) || artistMatches(h.artist!, r.artist)));
+    have.find((h) => similar(norm(h.title), norm(r.title)) >= 0.9 && sameNum(h.title, r.title) && (!named(h.artist) || !named(r.artist) || artistMatches(h.artist!, r.artist)));
   const all = readFileSync(jsonl, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l) as Row);
   const seen = new Set<string>(); // the crawl file can list a page twice
   const fresh = all.filter((r) => {

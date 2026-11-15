@@ -127,6 +127,8 @@ test("shared setlist is sanitized", async () => {
   assert.equal(cover("https://evil.example/mzstatic.com.jpg"), null);
   assert.equal(cover("http://is1-ssl.mzstatic.com/x.jpg"), null);
   assert.equal(cover("javascript:alert(1)"), null);
+  assert.equal(cover("/covers/hymne.jpg"), "/covers/hymne.jpg");
+  assert.equal(cover("/covers/../secret.jpg"), null);
 });
 
 test("chord library: every root × quality has guitar voicings and piano inversions", async () => {

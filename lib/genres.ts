@@ -35,7 +35,7 @@ const ARTISTS: Record<string, GenreSlug | null> = {
   "bing crosby": "jazz", "phil driscoll": "jazz",
   "michael bublé": "pop-jazz", "citra scholastika": "pop-jazz",
   "alan jackson": "country", "cristy lane": "country", "housefires": "country", "the clark family": "country",
-  "dewis sl": "hymne", "keswick": "hymne", "fanny j. crosby (1873)": "hymne", "horatio g. spafford (1873)": "hymne", "keith & kristyn getty": "hymne",
+  "dewis sl": "hymne", "kppk": "hymne", "keswick": "hymne", "fanny j. crosby (1873)": "hymne", "horatio g. spafford (1873)": "hymne", "keith & kristyn getty": "hymne",
   "fountainview academy orchestra & singer": null, "charlotte church": null, "-": null, "various artists": null,
 };
 
@@ -47,7 +47,7 @@ const ITUNES: [RegExp, GenreSlug][] = [
 ];
 
 /** Kidung Jemaat, NKB, PKJ… numbers in the title mean a church hymn, whoever recorded it. */
-const HYMN = /\((kj|nkb|pkj|kpri|mb|be)\s*\.?\s*\d+/i;
+const HYMN = /\((kj|nkb|pkj|kpri|kppk|mb|be)\s*\.?\s*\d+/i;
 
 export function genreFor(s: { title: string; artist: string | null; itunesGenre?: string | null }): GenreSlug | null {
   if (HYMN.test(s.title)) return "hymne";

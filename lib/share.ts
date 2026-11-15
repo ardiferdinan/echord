@@ -2,10 +2,12 @@ import type { Setlist, SetlistItem } from "./storage";
 
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
 
-/** A cover only from the hosts next.config allows for images (iTunes / Deezer); anything else is dropped. */
+/** A cover only from the hosts next.config allows for images (iTunes / Deezer) or our own /covers/*.jpg; anything else is dropped. */
 export function cover(v: unknown): string | null {
+  const s = str(v, 500);
+  if (/^\/covers\/[a-z0-9-]+\.jpg$/.test(s)) return s;
   try {
-    const u = new URL(str(v, 500));
+    const u = new URL(s);
     return u.protocol === "https:" && /(^|\.)(mzstatic\.com|dzcdn\.net)$/.test(u.hostname) ? u.href : null;
   } catch {
     return null;

@@ -2,5 +2,5 @@
 export function sourceName(url: string | null | undefined) {
   if (!url) return "Manual";
   const host = new URL(url).hostname.replace(/^www\./, "");
-  return ({ "jrchord.com": "JRChord", "psalmnote.com": "PsalmNote" } as Record<string, string>)[host] ?? host;
+  return ({ "jrchord.com": "JRChord", "psalmnote.com": "PsalmNote", "bukupujian2.blogspot.com": "BukuPujian" } as Record<string, string>)[host] ?? host;
 }
