@@ -34,7 +34,14 @@ def song(page, url):
 
 def main():
     index = Fetcher.get(INDEX, timeout=30)
-    urls = list(dict.fromkeys(a.attrib.get("href", "") for a in index.css("a") if re.search(r"kppk-\d+\.html$", a.attrib.get("href", ""), re.I)))
+    # entries are "12. Judul" links; most URLs end in kppk-12.html, some don't (the number then comes from the index)
+    numbered = {}
+    for a in index.css("a"):
+        href, text = a.attrib.get("href", ""), (a.text or "").strip()
+        n = re.match(r"^(\d+)\.\s", text)
+        if re.search(r"/20\d\d/\d\d/[^/]+\.html$", href) and (n or re.search(r"kppk-\d+\.html$", href, re.I)):
+            numbered.setdefault(href, n.group(1) if n else None)
+    urls = list(numbered)
     done = {json.loads(l)["url"] for l in OUT.read_text().splitlines() if l.strip()} if OUT.exists() else set()
     todo = [u for u in urls if u not in done]
     print(f"{len(urls)} lagu KPPK di indeks, {len(done)} sudah diambil, {len(todo)} sisa", flush=True)
@@ -43,6 +50,8 @@ def main():
             time.sleep(3)
             try:
                 row = song(Fetcher.get(url, timeout=30), url)
+                if "error" not in row and numbered[url] and not re.search(r"\(KPPK\s*\d+\)", row["title"], re.I):
+                    row["title"] += f" (KPPK {numbered[url]})"  # keep the hymn number, like the others
             except Exception as e:  # network hiccup: logged, retried on the next run
                 print(f"[{i}/{len(todo)}] ✗ {url}: {e}", flush=True)
                 continue
