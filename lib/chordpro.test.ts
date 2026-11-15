@@ -267,3 +267,14 @@ test("sessions and passwords", async () => {
   assert.ok(await verifyPassword("rahasia-123", h));
   assert.equal(await verifyPassword("rahasia-124", h), false);
 });
+
+test("import: part tags like [Chorus] are not ChordPro; bars, rhythm dots and alternatives in chord lines", async () => {
+  const { importText, parseSections } = await import("./chordpro");
+  const raw = "[ Intro ]\n| F  •  •  • | C  •  •  • |\n\n[Chorus]\nE(C#m) A   B        E\nO..... O.. O kelimpahan datang\nEmaj7.      F#add2\nKau baik\n\n[Bridge]\nAb///|Db///|\n";
+  const secs = parseSections(importText(raw).content);
+  const chords = secs.flatMap((s) => s.lines.flatMap((l) => l.chords.map((c) => c.name)));
+  const text = secs.flatMap((s) => s.lines.map((l) => l.text)).join(" ");
+  assert.deepEqual(chords, ["F", "C", "E", "A", "B", "E", "Emaj7", "F#add2", "Ab", "Db"]);
+  assert.ok(!/[|•]|Emaj7|E\(C#m\)/.test(text), "no chord left in the lyrics: " + text);
+  assert.deepEqual(secs.map((s) => s.label), ["Intro", "Chorus", "Bridge"]);
+});

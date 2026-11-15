@@ -181,15 +181,30 @@ export function uniqueChords(sections: Section[]) {
 // ---------- import: "chords over words" plain text -> ChordPro ----------
 const CHORD_LINE_NOISE = /^(\||\/|-+|x\d+|\d+x|\(|\)|\.+|•|%|:)$/i;
 
+/** A chord as written in a chord line: "Emaj7." / "Ab///" (rhythm dots and slashes), "E(C#m)" (an alternative in brackets). */
+function chordWord(raw: string) {
+  let t = raw.replace(/[.\/•,]+$/, "");
+  if (!t.includes("(") || t.startsWith("(")) t = t.replace(/^\(+|\)+$/g, ""); // "(Am", "G)", "(Am)"
+  if (isChord(t)) return t;
+  const alt = t.match(/^(.+?)\(([^)]+)\)$/); // E(C#m): play E (C#m is the alternative)
+  return alt && isChord(alt[1]) && isChord(alt[2]) ? alt[1] : null;
+}
+
 function chordTokens(line: string) {
   const out: ChordAt[] = [];
   const re = /\S+/g;
   let m;
   while ((m = re.exec(line))) {
-    const tok = m[0].replace(/^[(|]+|[)|,]+$/g, "");
-    if (!tok || CHORD_LINE_NOISE.test(m[0])) continue;
-    if (!isChord(tok)) return null;
-    out.push({ at: m.index, name: tok });
+    // bar lines glue chords together: "C|Gm", "F|F|Bb|", "Dadd9...|Esus2..."
+    let at = m.index;
+    for (const part of m[0].split("|")) {
+      const start = at;
+      at += part.length + 1;
+      if (!part || CHORD_LINE_NOISE.test(part) || /^[.\/•%:\-()]+$/.test(part)) continue;
+      const name = chordWord(part);
+      if (!name) return null;
+      out.push({ at: start + (part.length - part.replace(/^\(+/, "").length), name });
+    }
   }
   return out.length ? out : null;
 }
@@ -201,7 +216,8 @@ export function importText(raw: string): Imported {
   let title: string | undefined, artist: string | undefined;
 
   // Already ChordPro? keep it.
-  if (/\{\s*(start_of_|so[cvb]?\b)|\[[A-G][#b]?[^\]\s]*\]/.test(raw)) {
+  // ("[Chorus]" / "[Bridge]" are part tags, not chords: only a bracketed real chord means ChordPro)
+  if (/\{\s*(start_of_|so[cvb]?\b)/.test(raw) || [...raw.matchAll(/\[([^\]\s]+)\]/g)].some((m) => isChord(m[1]))) {
     const t = raw.match(/\{\s*(?:title|t)\s*:\s*(.*?)\s*\}/)?.[1];
     const a = raw.match(/\{\s*(?:artist|subtitle|st)\s*:\s*(.*?)\s*\}/)?.[1];
     const sections = parseSections(raw);
