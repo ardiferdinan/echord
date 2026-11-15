@@ -7,11 +7,25 @@ import { createUser, ensureTables, findLogin, userCount, verifyPassword } from "
 
 const same = (a: string, b: string) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
-export async function login(_: string | null, form: FormData): Promise<string | null> {
+export async function login(prev: string | null, form: FormData): Promise<string | null> {
+  let next: string;
+  try {
+    const r = await signIn(form);
+    if (typeof r === "string") return r;
+    next = r.next;
+  } catch (e) {
+    console.error("login failed", e);
+    return `Login gagal di server: ${(e as Error).message}`; // shown in the form, so a problem can be reported
+  }
+  redirect(next); // outside try: redirect works by throwing
+}
+
+async function signIn(form: FormData): Promise<string | { next: string }> {
   const id = String(form.get("login") ?? "").trim();
   const password = String(form.get("password") ?? "");
   if (!id || !password) return "Isi username/email dan password.";
-  await ensureTables();
+  // creating the tables is only needed once; if it fails but they exist, the queries below still work
+  await ensureTables().catch((e) => console.error("ensureTables", e));
 
   let userId: number;
   if ((await userCount()) === 0) {
@@ -36,7 +50,7 @@ export async function login(_: string | null, form: FormData): Promise<string | 
     httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * SESSION_DAYS,
   });
   const next = String(form.get("next") ?? "/");
-  redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
+  return { next: next.startsWith("/") && !next.startsWith("//") ? next : "/" };
 }
 
 export async function logout() {
