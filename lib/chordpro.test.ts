@@ -289,3 +289,10 @@ test("import: nested part tags, repeat signs, bracketed notes in lyrics", async 
   assert.deepEqual(chords, ["G", "C", "Bb", "Dm", "F/C", "Am", "D", "G", "D"]);
   assert.ok(secs[1].lines.some((l) => l.text.includes("(Back to verse)")));
 });
+
+test("import: chord lines with semicolons and long dashes", async () => {
+  const { importText, parseSections } = await import("./chordpro");
+  const secs = parseSections(importText("[ Intro ]\n| D  •  •  •;|\n\n[ Verse ]\n                      C – D\nla la\n").content);
+  assert.deepEqual(secs.flatMap((s) => s.lines.flatMap((l) => l.chords.map((c) => c.name))), ["D", "C", "D"]);
+  assert.ok(!secs.some((s) => s.lines.some((l) => /[•;–]/.test(l.text))));
+});

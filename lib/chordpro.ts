@@ -182,7 +182,7 @@ export function uniqueChords(sections: Section[]) {
 }
 
 // ---------- import: "chords over words" plain text -> ChordPro ----------
-const CHORD_LINE_NOISE = /^(\||\/|-+|x\d+|\d+x|\(|\)|\.+|•|%|:)$/i;
+const CHORD_LINE_NOISE = /^(\||\/|[-–—]+|x\d+|\d+x|\(|\)|\.+|•;?|%|:|;)$/i;
 
 /** A chord as written in a chord line: "Emaj7." / "Ab///" (rhythm dots and slashes), "E(C#m)" (an alternative in brackets). */
 function chordWord(raw: string) {
@@ -203,7 +203,7 @@ function chordTokens(line: string) {
     for (const part of m[0].split("|")) {
       const start = at;
       at += part.length + 1;
-      if (!part || CHORD_LINE_NOISE.test(part) || /^[.\/•%:\-()]+$/.test(part)) continue;
+      if (!part || CHORD_LINE_NOISE.test(part) || /^[.\/•%:;\-–—()]+$/.test(part)) continue;
       const name = chordWord(part);
       if (!name) return null;
       out.push({ at: start + (part.length - part.replace(/^\(+/, "").length), name });
